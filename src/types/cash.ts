@@ -98,12 +98,19 @@ export type FundingSourceWithUsage = FundingSource & {
   milestoneCount: number;
 };
 
+// Milestone with additional details from related entities
+export type MilestoneWithDetails = PaymentMilestone & {
+  categoryName?: string;
+  vendorName?: string;
+  fundingSourceName?: string;
+};
+
 // API response types
 export type CashOverviewResponse = {
   summary: CashSummary;
   fundingSources: FundingSourceWithUsage[];
   categories: BudgetCategory[];
-  upcomingMilestones: PaymentMilestone[];
+  upcomingMilestones: MilestoneWithDetails[];
   monthlyData: MonthlyCashflow[];
   alerts: CashAlert[];
 };

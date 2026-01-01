@@ -166,6 +166,11 @@ model TimelineEvent {
   locked    Boolean     @default(false)
   notes     String?
 
+  // Location info
+  locationLabel String?
+  locationLat   Float?
+  locationLng   Float?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

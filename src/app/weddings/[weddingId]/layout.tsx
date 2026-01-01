@@ -68,7 +68,7 @@ function UserIcon() {
   );
 }
 
-const ICONS: Record<string, () => JSX.Element> = {
+const ICONS: Record<string, () => React.ReactElement> = {
   home: HomeIcon,
   calendar: CalendarIcon,
   dollar: DollarIcon,
@@ -108,7 +108,7 @@ export default function WeddingLayout({
                 {NAV_ITEMS.map((item) => {
                   const href = `${basePath}${item.href}`;
                   const isActive = pathname === href ||
-                    (item.href && pathname.startsWith(href));
+                    (item.href !== "" && pathname.startsWith(href));
                   const Icon = ICONS[item.icon];
 
                   return (

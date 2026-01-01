@@ -23,8 +23,8 @@ export type TimelineLane = {
   id: string;
   weddingId: string;
   name: string;
-  type: LaneType;
-  owner: OwnerRef;
+  laneType: LaneType;
+  owner?: OwnerRef | null;
   sortOrder: number;
 };
 
@@ -37,14 +37,24 @@ export type TimelineEventItem = {
   startUtc: string; // ISO UTC
   endUtc: string; // ISO UTC
   laneId: string;
-  category: LaneType;
-  assignedOwner: OwnerRef;
-  status: EventStatus;
-  locked: boolean;
-  notes?: string;
+  category?: LaneType;
+  assignedOwner?: string | null;
+  status?: EventStatus;
+  locked?: boolean;
+  notes?: string | null;
+  locationLabel?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
 };
 
-export type BandType = "night" | "golden" | "forecast";
+export type BandType =
+  | "night"
+  | "golden_hour"
+  | "sunset"
+  | "civil_twilight"
+  | "blue_hour"
+  | "meal"
+  | "custom";
 
 export type TimelineBackgroundBand = {
   id: string;
@@ -68,7 +78,7 @@ export type PatchOp =
   | { op: "update_event_time"; eventId: string; startUtc: string; endUtc: string }
   | { op: "update_event_lane"; eventId: string; laneId: string }
   | { op: "update_event_title"; eventId: string; title: string }
-  | { op: "update_event_owner"; eventId: string; owner: OwnerRef }
+  | { op: "update_event_owner"; eventId: string; owner: string }
   | { op: "delete_event"; eventId: string }
   | { op: "create_lane"; lane: TimelineLane }
   | { op: "update_lane"; laneId: string; name?: string; owner?: OwnerRef; sortOrder?: number }
@@ -94,6 +104,7 @@ export type TimelineProposal = {
 export type TimelineResponse = {
   version: number;
   venueTimezone: string;
+  weddingDate: string;
   windowStartUtc: string;
   windowEndUtc: string;
   lanes: TimelineLane[];
