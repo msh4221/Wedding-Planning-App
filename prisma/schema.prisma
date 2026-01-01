@@ -1,0 +1,377 @@
+// Wedding Planning App - Prisma Schema
+// Covers: Timeline Module + Cash Management Module
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// CORE TABLES
+// ============================================
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String
+  avatarUrl   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  memberships     WeddingMembership[]
+  notifications   Notification[]
+}
+
+model Wedding {
+  id              String   @id @default(cuid())
+  name            String   // e.g., "Sarah & John's Wedding"
+  weddingDate     String   // YYYY-MM-DD in venue local time
+
+  // Venue information
+  venueName       String?
+  venueAddress    String?
+  venueTimezone   String   @default("America/New_York") // IANA timezone
+  lat             Float?   // For sunset/weather APIs
+  lng             Float?
+
+  // Timeline versioning (for conflict detection)
+  timelineVersion Int      @default(0)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  memberships         WeddingMembership[]
+  lanes               TimelineLane[]
+  events              TimelineEvent[]
+  proposals           TimelineProposal[]
+  backgroundBands     TimelineBackgroundBand[]
+  fundingSources      BudgetFundingSource[]
+  categories          BudgetCategory[]
+  contracts           Contract[]
+  milestones          PaymentMilestone[]
+  notifications       Notification[]
+}
+
+model WeddingMembership {
+  id        String   @id @default(cuid())
+
+  weddingId String
+  wedding   Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Timeline module role
+  timelineRole  TimelineRole @default(VIEW_ONLY)
+
+  // Budget module role
+  budgetRole    BudgetRole   @default(NONE)
+
+  // Optional: link to vendor if this is a vendor membership
+  vendorName    String?
+  vendorType    String?  // photographer, caterer, florist, etc.
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([weddingId, userId])
+}
+
+enum TimelineRole {
+  COUPLE_TIMELINE_ADMIN
+  PLANNER_TIMELINE_ADMIN
+  VENDOR_TIMELINE_COLLAB
+  VIEW_ONLY
+}
+
+enum BudgetRole {
+  COUPLE_BUDGET_ADMIN
+  NONE
+}
+
+// ============================================
+// TIMELINE MODULE
+// ============================================
+
+model TimelineLane {
+  id        String   @id @default(cuid())
+
+  weddingId String
+  wedding   Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+
+  name      String   // "Photography", "Ceremony", etc.
+  type      LaneType
+
+  // Owner of this lane
+  ownerType OwnerType
+  ownerId   String
+  ownerName String
+
+  sortOrder Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events    TimelineEvent[]
+}
+
+enum LaneType {
+  photo
+  ceremony
+  transport
+  venue_ops
+  music
+  meal
+  prep
+  misc
+}
+
+enum OwnerType {
+  couple
+  planner
+  vendor
+  person
+  group
+  system
+}
+
+model TimelineEvent {
+  id        String   @id @default(cuid())
+
+  weddingId String
+  wedding   Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+
+  laneId    String
+  lane      TimelineLane @relation(fields: [laneId], references: [id], onDelete: Cascade)
+
+  title     String
+
+  // Times stored in UTC
+  startUtc  DateTime
+  endUtc    DateTime
+
+  category  LaneType
+
+  // Assigned owner (defaults to lane owner)
+  assignedOwnerType OwnerType
+  assignedOwnerId   String
+  assignedOwnerName String
+
+  status    EventStatus @default(tentative)
+  locked    Boolean     @default(false)
+  notes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum EventStatus {
+  tentative
+  confirmed
+}
+
+model TimelineProposal {
+  id        String   @id @default(cuid())
+
+  weddingId String
+  wedding   Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+
+  // Who created the proposal
+  createdByType OwnerType
+  createdById   String
+  createdByName String
+
+  // Version this proposal was created against
+  baseVersion   Int
+
+  // Patch operations as JSON
+  patchOps      String   // JSON array of PatchOp
+
+  // Optional message explaining the proposal
+  message       String?
+
+  status        ProposalStatus @default(pending)
+
+  // If applied, when and by whom
+  appliedAt     DateTime?
+  appliedById   String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+enum ProposalStatus {
+  pending
+  applied
+  rejected
+  needs_review
+}
+
+model TimelineBackgroundBand {
+  id        String   @id @default(cuid())
+
+  weddingId String
+  wedding   Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+
+  bandType  BandType
+
+  // Times in UTC
+  startUtc  DateTime
+  endUtc    DateTime
+
+  label     String   // "Golden Hour", "Sunset", etc.
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum BandType {
+  night
+  golden
+  forecast
+}
+
+// ============================================
+// CASH MANAGEMENT MODULE
+// ============================================
+
+model BudgetFundingSource {
+  id        String   @id @default(cuid())
+
+  weddingId String
+  wedding   Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+
+  name            String   // "Bride's Parents", "Couple", "Groom's Parents"
+  committedAmount Int      // Amount in cents
+  notes           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  milestones PaymentMilestone[]
+}
+
+model BudgetCategory {
+  id        String   @id @default(cuid())
+
+  weddingId String
+  wedding   Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+
+  name          String   // "Venue", "Catering", "Photography", etc.
+  targetAmount  Int      // Budget target in cents
+  notes         String?
+  sortOrder     Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contracts   Contract[]
+  milestones  PaymentMilestone[]
+}
+
+model Contract {
+  id        String   @id @default(cuid())
+
+  weddingId String
+  wedding   Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+
+  categoryId String?
+  category   BudgetCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  vendorName    String
+  vendorContact String?
+  vendorEmail   String?
+  vendorPhone   String?
+
+  totalAmount   Int      // Total contract value in cents
+  notes         String?
+
+  // Contract dates
+  signedDate    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  milestones PaymentMilestone[]
+}
+
+model PaymentMilestone {
+  id        String   @id @default(cuid())
+
+  weddingId String
+  wedding   Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+
+  // Optional links
+  categoryId      String?
+  category        BudgetCategory?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  contractId      String?
+  contract        Contract?           @relation(fields: [contractId], references: [id], onDelete: SetNull)
+
+  fundingSourceId String?
+  fundingSource   BudgetFundingSource? @relation(fields: [fundingSourceId], references: [id], onDelete: SetNull)
+
+  label       String   // "Deposit", "Final Payment", "Installment 1"
+  amount      Int      // Amount in cents
+  dueDate     DateTime
+
+  status      MilestoneStatus @default(planned)
+  paidDate    DateTime?
+
+  // v1 fields (optional for MVP)
+  paidAmount      Int?     // For partial payments
+  paymentMethod   String?  // ACH, check, card
+  confirmationRef String?  // Transaction reference
+
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum MilestoneStatus {
+  planned
+  due
+  paid
+}
+
+// ============================================
+// SHARED
+// ============================================
+
+model Notification {
+  id        String   @id @default(cuid())
+
+  weddingId String
+  wedding   Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type      NotificationType
+  title     String
+  message   String
+
+  // Link to related entity
+  relatedType String?  // "event", "proposal", "milestone"
+  relatedId   String?
+
+  read      Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+enum NotificationType {
+  timeline_change
+  proposal_received
+  proposal_applied
+  proposal_rejected
+  payment_due
+  payment_reminder
+  general
+}
