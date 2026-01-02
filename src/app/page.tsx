@@ -48,7 +48,7 @@ export default function HomePage() {
                   <li>Vendor coordination with proposals</li>
                   <li>Real-time collaboration</li>
                 </ul>
-                <Link href="/weddings/demo/timeline">
+                <Link href="/weddings/demo/timeline" prefetch={false}>
                   <Button className="w-full">Open Timeline</Button>
                 </Link>
               </CardContent>

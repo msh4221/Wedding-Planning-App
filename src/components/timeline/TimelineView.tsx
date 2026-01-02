@@ -1,13 +1,28 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { useTimeline } from "@/hooks/useTimeline";
-import { TimelineCanvas } from "./TimelineCanvas";
 import { TimelineToolbar } from "./TimelineToolbar";
 import { TimelineInspector } from "./TimelineInspector";
 import { AddEventDialog } from "./AddEventDialog";
+import { TimelineErrorBoundary } from "./TimelineErrorBoundary";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
+
+// Dynamically import TimelineCanvas with SSR disabled
+const TimelineCanvas = dynamic(
+  () => import("./TimelineCanvas").then((mod) => mod.TimelineCanvas),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading timeline...</span>
+      </div>
+    ),
+  }
+);
 
 type TimelineViewProps = {
   weddingId: string;
@@ -94,7 +109,6 @@ export function TimelineView({
 
   const handleZoomIn = useCallback(() => {
     // Zoom is handled directly by vis-timeline
-    // We could store zoom level in state if needed
   }, []);
 
   const handleZoomOut = useCallback(() => {
@@ -164,19 +178,21 @@ export function TimelineView({
       <div className="flex-1 flex overflow-hidden">
         {/* Timeline canvas */}
         <div className={`flex-1 ${showInspector ? "mr-0" : ""}`}>
-          <TimelineCanvas
-            events={displayEvents}
-            lanes={displayLanes}
-            bands={timeline.bands}
-            windowStartUtc={timeline.windowStartUtc}
-            windowEndUtc={timeline.windowEndUtc}
-            venueTimezone={timeline.venueTimezone}
-            selectedEventId={selectedEventId}
-            onSelectEvent={setSelectedEventId}
-            onUpdateEventTime={updateEventTime}
-            onUpdateEventLane={updateEventLane}
-            readOnly={readOnly}
-          />
+          <TimelineErrorBoundary>
+            <TimelineCanvas
+              events={displayEvents}
+              lanes={displayLanes}
+              bands={timeline.bands}
+              windowStartUtc={timeline.windowStartUtc}
+              windowEndUtc={timeline.windowEndUtc}
+              venueTimezone={timeline.venueTimezone}
+              selectedEventId={selectedEventId}
+              onSelectEvent={setSelectedEventId}
+              onUpdateEventTime={updateEventTime}
+              onUpdateEventLane={updateEventLane}
+              readOnly={readOnly}
+            />
+          </TimelineErrorBoundary>
         </div>
 
         {/* Inspector panel */}

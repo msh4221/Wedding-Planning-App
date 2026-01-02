@@ -71,7 +71,7 @@ export default function WeddingOverviewPage() {
             <CardTitle className="text-2xl">{stats.timelineEvents}</CardTitle>
           </CardHeader>
           <CardContent>
-            <Link href={`/weddings/${weddingId}/timeline`}>
+            <Link href={`/weddings/${weddingId}/timeline`} prefetch={false}>
               <Button variant="link" className="p-0 h-auto">
                 View Timeline
               </Button>
@@ -132,7 +132,7 @@ export default function WeddingOverviewPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href={`/weddings/${weddingId}/timeline`}>
+            <Link href={`/weddings/${weddingId}/timeline`} prefetch={false}>
               <Button className="w-full">Open Timeline</Button>
             </Link>
           </CardContent>

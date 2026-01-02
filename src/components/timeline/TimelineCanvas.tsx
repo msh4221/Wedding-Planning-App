@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useMemo } from "react";
-import { Timeline } from "vis-timeline/standalone";
-import { DataSet } from "vis-data/standalone";
 import type { TimelineEventItem, TimelineLane, TimelineBackgroundBand } from "@/types/timeline";
 import { DateTime } from "luxon";
-import "vis-timeline/styles/vis-timeline-graph2d.css";
+import "./timeline-canvas.css";
 
 type TimelineCanvasProps = {
   events: TimelineEventItem[];
@@ -21,6 +19,9 @@ type TimelineCanvasProps = {
   readOnly?: boolean;
 };
 
+// Lifecycle states for the timeline component
+type LifecycleState = 'idle' | 'initializing' | 'ready' | 'destroying';
+
 export function TimelineCanvas({
   events,
   lanes,
@@ -35,9 +36,28 @@ export function TimelineCanvas({
   readOnly = false,
 }: TimelineCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const timelineRef = useRef<Timeline | null>(null);
-  const itemsRef = useRef<DataSet<any>>(new DataSet());
-  const groupsRef = useRef<DataSet<any>>(new DataSet());
+  const timelineRef = useRef<any>(null);
+  const itemsRef = useRef<any>(null);
+  const groupsRef = useRef<any>(null);
+
+  // Lifecycle state machine to prevent race conditions
+  const lifecycleRef = useRef<LifecycleState>('idle');
+
+  // Store callbacks in refs to avoid effect dependency changes
+  const callbacksRef = useRef({
+    onSelectEvent,
+    onUpdateEventTime,
+    onUpdateEventLane,
+  });
+
+  // Keep callbacks ref updated
+  useEffect(() => {
+    callbacksRef.current = {
+      onSelectEvent,
+      onUpdateEventTime,
+      onUpdateEventLane,
+    };
+  }, [onSelectEvent, onUpdateEventTime, onUpdateEventLane]);
 
   // Convert UTC to venue timezone for display
   const toVenueTime = useCallback(
@@ -104,156 +124,240 @@ export function TimelineCanvas({
     }));
   }, [bands, toVenueTime]);
 
-  // Initialize timeline
+  // Store current events in ref for move handler
+  const eventsRef = useRef(events);
   useEffect(() => {
-    if (!containerRef.current || timelineRef.current) return;
+    eventsRef.current = events;
+  }, [events]);
 
-    const windowStart = toVenueTime(windowStartUtc).toJSDate();
-    const windowEnd = toVenueTime(windowEndUtc).toJSDate();
-
-    const options = {
-      editable: !readOnly
-        ? {
-            updateTime: true,
-            updateGroup: true,
-            add: false,
-            remove: false,
-          }
-        : false,
-      snap: snapToMinute,
-      min: windowStart,
-      max: windowEnd,
-      start: windowStart,
-      end: windowEnd,
-      zoomMin: 1000 * 60 * 30, // 30 minutes
-      zoomMax: 1000 * 60 * 60 * 24, // 24 hours
-      orientation: "top",
-      stack: false,
-      showCurrentTime: false,
-      groupOrder: "id",
-      margin: {
-        item: {
-          horizontal: 0,
-          vertical: 5,
-        },
-      },
-      tooltip: {
-        followMouse: true,
-        overflowMethod: "cap" as const,
-      },
-    };
-
-    const timeline = new Timeline(
-      containerRef.current,
-      itemsRef.current,
-      groupsRef.current,
-      options
-    );
-
-    // Handle selection
-    timeline.on("select", (properties: { items: string[] }) => {
-      const selectedId = properties.items[0] || null;
-      // Filter out background band selections
-      if (selectedId && selectedId.startsWith("band-")) {
-        onSelectEvent(null);
-      } else {
-        onSelectEvent(selectedId);
-      }
-    });
-
-    // Handle item move (time change)
-    timeline.on("itemover", () => {
-      if (containerRef.current) {
-        containerRef.current.style.cursor = readOnly ? "default" : "move";
-      }
-    });
-
-    timeline.on("itemout", () => {
-      if (containerRef.current) {
-        containerRef.current.style.cursor = "default";
-      }
-    });
-
-    timelineRef.current = timeline;
-
-    return () => {
-      timeline.destroy();
-      timelineRef.current = null;
-    };
-  }, [windowStartUtc, windowEndUtc, venueTimezone, readOnly, snapToMinute, toVenueTime, onSelectEvent]);
-
-  // Handle drag end - update event time or lane
+  // EFFECT 1: Initialize and cleanup timeline (consolidated)
   useEffect(() => {
-    const timeline = timelineRef.current;
-    if (!timeline || readOnly) return;
+    if (!containerRef.current) return;
+    if (lifecycleRef.current !== 'idle') return; // Prevent re-initialization
 
-    const handleMove = (item: any, callback: (item: any) => void) => {
-      const snappedStart = snapToMinute(item.start);
-      const snappedEnd = snapToMinute(item.end);
+    lifecycleRef.current = 'initializing';
 
-      // Check bounds
-      const windowStart = toVenueTime(windowStartUtc).toJSDate();
-      const windowEnd = toVenueTime(windowEndUtc).toJSDate();
+    let mounted = true;
+    let timelineInstance: any = null;
+    let itemsInstance: any = null;
+    let groupsInstance: any = null;
 
-      if (snappedStart < windowStart || snappedEnd > windowEnd) {
-        callback(null); // Cancel the move
-        return;
-      }
+    const initTimeline = async () => {
+      try {
+        // Dynamically import vis-timeline CSS and modules
+        await import("vis-timeline/styles/vis-timeline-graph2d.css");
+        const [{ Timeline }, { DataSet }] = await Promise.all([
+          import("vis-timeline/standalone"),
+          import("vis-data/standalone"),
+        ]);
 
-      // Ensure minimum duration of 1 minute
-      if (snappedEnd.getTime() - snappedStart.getTime() < 60000) {
-        callback(null);
-        return;
-      }
-
-      const startUtc = toUtc(snappedStart);
-      const endUtc = toUtc(snappedEnd);
-
-      if (startUtc && endUtc) {
-        // Find original event to check if lane changed
-        const originalEvent = events.find((e) => e.id === item.id);
-        if (originalEvent && originalEvent.laneId !== item.group) {
-          onUpdateEventLane(item.id, item.group);
+        if (!mounted || !containerRef.current || lifecycleRef.current === 'destroying') {
+          return;
         }
-        onUpdateEventTime(item.id, startUtc, endUtc);
-      }
 
-      // Update item with snapped values
-      item.start = snappedStart;
-      item.end = snappedEnd;
-      callback(item);
+        // Create DataSets
+        itemsInstance = new DataSet();
+        groupsInstance = new DataSet();
+
+        const windowStart = toVenueTime(windowStartUtc).toJSDate();
+        const windowEnd = toVenueTime(windowEndUtc).toJSDate();
+
+        const options = {
+          editable: !readOnly
+            ? {
+                updateTime: true,
+                updateGroup: true,
+                add: false,
+                remove: false,
+              }
+            : false,
+          snap: snapToMinute,
+          min: windowStart,
+          max: windowEnd,
+          start: windowStart,
+          end: windowEnd,
+          zoomMin: 1000 * 60 * 30, // 30 minutes
+          zoomMax: 1000 * 60 * 60 * 24, // 24 hours
+          orientation: "top" as const,
+          stack: false,
+          showCurrentTime: false,
+          groupOrder: "id",
+          margin: {
+            item: {
+              horizontal: 0,
+              vertical: 5,
+            },
+          },
+          tooltip: {
+            followMouse: true,
+            overflowMethod: "cap" as const,
+          },
+          // Set up onMove handler during initialization
+          onMove: !readOnly ? (item: any, callback: (item: any) => void) => {
+            // Guard against operations during cleanup
+            if (lifecycleRef.current !== 'ready') {
+              callback(null);
+              return;
+            }
+
+            const snappedStart = snapToMinute(item.start);
+            const snappedEnd = snapToMinute(item.end);
+
+            // Check bounds
+            if (snappedStart < windowStart || snappedEnd > windowEnd) {
+              callback(null);
+              return;
+            }
+
+            // Ensure minimum duration of 1 minute
+            if (snappedEnd.getTime() - snappedStart.getTime() < 60000) {
+              callback(null);
+              return;
+            }
+
+            const startUtc = toUtc(snappedStart);
+            const endUtc = toUtc(snappedEnd);
+
+            if (startUtc && endUtc) {
+              // Find original event to check if lane changed
+              const originalEvent = eventsRef.current.find((e) => e.id === item.id);
+              if (originalEvent && originalEvent.laneId !== item.group) {
+                callbacksRef.current.onUpdateEventLane(item.id, item.group);
+              }
+              callbacksRef.current.onUpdateEventTime(item.id, startUtc, endUtc);
+            }
+
+            // Update item with snapped values
+            item.start = snappedStart;
+            item.end = snappedEnd;
+            callback(item);
+          } : undefined,
+        };
+
+        timelineInstance = new Timeline(
+          containerRef.current,
+          itemsInstance,
+          groupsInstance,
+          options
+        );
+
+        // Handle selection
+        timelineInstance.on("select", (properties: { items: string[] }) => {
+          if (lifecycleRef.current !== 'ready') return;
+
+          const selectedId = properties.items[0] || null;
+          // Filter out background band selections
+          if (selectedId && selectedId.startsWith("band-")) {
+            callbacksRef.current.onSelectEvent(null);
+          } else {
+            callbacksRef.current.onSelectEvent(selectedId);
+          }
+        });
+
+        // Store refs
+        timelineRef.current = timelineInstance;
+        itemsRef.current = itemsInstance;
+        groupsRef.current = groupsInstance;
+
+        // Mark as ready
+        lifecycleRef.current = 'ready';
+      } catch (error) {
+        console.error("Failed to initialize timeline:", error);
+        lifecycleRef.current = 'idle';
+      }
     };
 
-    timeline.setOptions({ onMove: handleMove });
+    initTimeline();
 
     return () => {
-      timeline.setOptions({ onMove: undefined });
+      mounted = false;
+
+      // Prevent double cleanup
+      if (lifecycleRef.current === 'destroying' || lifecycleRef.current === 'idle') {
+        return;
+      }
+
+      lifecycleRef.current = 'destroying';
+
+      // Capture refs before nullifying
+      const timeline = timelineRef.current;
+      const items = itemsRef.current;
+      const groups = groupsRef.current;
+
+      // Nullify refs immediately to prevent access from other code
+      timelineRef.current = null;
+      itemsRef.current = null;
+      groupsRef.current = null;
+
+      // Clean up event listeners
+      if (timeline) {
+        try {
+          timeline.off("select");
+        } catch (e) {
+          // Ignore
+        }
+      }
+
+      // Clear DataSets before destroying timeline
+      if (items) {
+        try {
+          items.clear();
+        } catch (e) {
+          // Ignore
+        }
+      }
+      if (groups) {
+        try {
+          groups.clear();
+        } catch (e) {
+          // Ignore
+        }
+      }
+
+      // Delay destroy to let pending handlers complete
+      if (timeline) {
+        requestAnimationFrame(() => {
+          try {
+            timeline.destroy();
+          } catch (e) {
+            // Ignore cleanup errors
+          }
+          // Reset lifecycle state after destruction is complete
+          lifecycleRef.current = 'idle';
+        });
+      } else {
+        lifecycleRef.current = 'idle';
+      }
     };
-  }, [events, readOnly, snapToMinute, toUtc, toVenueTime, windowStartUtc, windowEndUtc, onUpdateEventTime, onUpdateEventLane]);
+  }, [windowStartUtc, windowEndUtc, venueTimezone, readOnly, snapToMinute, toVenueTime, toUtc]);
 
-  // Update groups when lanes change
+  // EFFECT 2: Sync data (groups, items, selection) when props change
   useEffect(() => {
-    groupsRef.current.clear();
-    groupsRef.current.add(groups);
-  }, [groups]);
+    // Only sync when timeline is ready
+    if (lifecycleRef.current !== 'ready') return;
+    if (!groupsRef.current || !itemsRef.current || !timelineRef.current) return;
 
-  // Update items when events change
-  useEffect(() => {
-    itemsRef.current.clear();
-    itemsRef.current.add([...items, ...backgroundItems]);
-  }, [items, backgroundItems]);
+    try {
+      // Update groups
+      groupsRef.current.clear();
+      groupsRef.current.add(groups);
 
-  // Handle selection changes
-  useEffect(() => {
-    const timeline = timelineRef.current;
-    if (!timeline) return;
+      // Update items (events + background bands)
+      itemsRef.current.clear();
+      itemsRef.current.add([...items, ...backgroundItems]);
 
-    if (selectedEventId) {
-      timeline.setSelection([selectedEventId]);
-    } else {
-      timeline.setSelection([]);
+      // Update selection
+      if (selectedEventId) {
+        timelineRef.current.setSelection([selectedEventId]);
+      } else {
+        timelineRef.current.setSelection([]);
+      }
+    } catch (e) {
+      // Ignore errors during data sync (component may be unmounting)
     }
-  }, [selectedEventId]);
+  }, [groups, items, backgroundItems, selectedEventId]);
+
+  const isReady = lifecycleRef.current === 'ready';
 
   return (
     <div className="timeline-canvas-wrapper">
@@ -261,142 +365,11 @@ export function TimelineCanvas({
         ref={containerRef}
         className="timeline-canvas h-full w-full"
       />
-      <style jsx global>{`
-        .timeline-canvas-wrapper {
-          height: 100%;
-          width: 100%;
-          overflow: hidden;
-        }
-
-        .timeline-canvas .vis-timeline {
-          border: 1px solid hsl(var(--border));
-          background: hsl(var(--background));
-          font-family: inherit;
-        }
-
-        .timeline-canvas .vis-panel.vis-left {
-          background: hsl(var(--muted));
-          border-right: 1px solid hsl(var(--border));
-        }
-
-        .timeline-canvas .vis-labelset .vis-label {
-          color: hsl(var(--foreground));
-          font-weight: 500;
-          padding: 0 12px;
-        }
-
-        .timeline-canvas .vis-item {
-          background: hsl(var(--primary));
-          border-color: hsl(var(--primary));
-          color: hsl(var(--primary-foreground));
-          border-radius: 4px;
-          font-size: 12px;
-          padding: 2px 8px;
-        }
-
-        .timeline-canvas .vis-item.selected {
-          background: hsl(var(--primary) / 0.9);
-          border-color: hsl(var(--ring));
-          box-shadow: 0 0 0 2px hsl(var(--ring));
-        }
-
-        .timeline-canvas .vis-item.vis-range {
-          border-radius: 4px;
-        }
-
-        .timeline-canvas .vis-item .vis-item-content {
-          padding: 2px 4px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .timeline-canvas .vis-time-axis .vis-text {
-          color: hsl(var(--muted-foreground));
-          font-size: 11px;
-        }
-
-        .timeline-canvas .vis-time-axis .vis-grid.vis-minor {
-          border-color: hsl(var(--border) / 0.5);
-        }
-
-        .timeline-canvas .vis-time-axis .vis-grid.vis-major {
-          border-color: hsl(var(--border));
-        }
-
-        .timeline-canvas .background-band {
-          opacity: 0.3;
-        }
-
-        .timeline-canvas .band-golden_hour {
-          background: #fbbf24;
-        }
-
-        .timeline-canvas .band-sunset {
-          background: #f97316;
-        }
-
-        .timeline-canvas .band-civil_twilight {
-          background: #8b5cf6;
-        }
-
-        .timeline-canvas .band-blue_hour {
-          background: #3b82f6;
-        }
-
-        .timeline-canvas .band-meal {
-          background: #22c55e;
-        }
-
-        .timeline-canvas .band-custom {
-          background: #6b7280;
-        }
-
-        /* Lane type colors */
-        .timeline-canvas .lane-ceremony .vis-item {
-          background: #ef4444;
-          border-color: #dc2626;
-        }
-
-        .timeline-canvas .lane-photo .vis-item {
-          background: #f59e0b;
-          border-color: #d97706;
-        }
-
-        .timeline-canvas .lane-transport .vis-item {
-          background: #3b82f6;
-          border-color: #2563eb;
-        }
-
-        .timeline-canvas .lane-meal .vis-item {
-          background: #22c55e;
-          border-color: #16a34a;
-        }
-
-        .timeline-canvas .lane-music .vis-item {
-          background: #8b5cf6;
-          border-color: #7c3aed;
-        }
-
-        .timeline-canvas .lane-vendor .vis-item {
-          background: #ec4899;
-          border-color: #db2777;
-        }
-
-        .timeline-canvas .lane-custom .vis-item {
-          background: hsl(var(--primary));
-          border-color: hsl(var(--primary));
-        }
-
-        .timeline-canvas .vis-drag-center {
-          cursor: move;
-        }
-
-        .timeline-canvas .vis-drag-left,
-        .timeline-canvas .vis-drag-right {
-          cursor: ew-resize;
-        }
-      `}</style>
+      {!isReady && lifecycleRef.current !== 'destroying' && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+          <p className="text-muted-foreground">Loading timeline...</p>
+        </div>
+      )}
     </div>
   );
 }

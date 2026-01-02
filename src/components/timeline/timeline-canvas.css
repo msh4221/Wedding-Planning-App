@@ -1,0 +1,141 @@
+.timeline-canvas-wrapper {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.timeline-canvas .vis-timeline {
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  font-family: inherit;
+}
+
+.timeline-canvas .vis-panel.vis-left {
+  background: hsl(var(--muted));
+  border-right: 1px solid hsl(var(--border));
+}
+
+.timeline-canvas .vis-labelset .vis-label {
+  color: hsl(var(--foreground));
+  font-weight: 500;
+  padding: 0 12px;
+}
+
+.timeline-canvas .vis-item {
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-radius: 4px;
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+.timeline-canvas .vis-item.selected {
+  background: hsl(var(--primary) / 0.9);
+  border-color: hsl(var(--ring));
+  box-shadow: 0 0 0 2px hsl(var(--ring));
+}
+
+.timeline-canvas .vis-item.vis-range {
+  border-radius: 4px;
+}
+
+.timeline-canvas .vis-item .vis-item-content {
+  padding: 2px 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timeline-canvas .vis-time-axis .vis-text {
+  color: hsl(var(--muted-foreground));
+  font-size: 11px;
+}
+
+.timeline-canvas .vis-time-axis .vis-grid.vis-minor {
+  border-color: hsl(var(--border) / 0.5);
+}
+
+.timeline-canvas .vis-time-axis .vis-grid.vis-major {
+  border-color: hsl(var(--border));
+}
+
+.timeline-canvas .background-band {
+  opacity: 0.3;
+}
+
+.timeline-canvas .band-golden_hour {
+  background: #fbbf24;
+}
+
+.timeline-canvas .band-sunset {
+  background: #f97316;
+}
+
+.timeline-canvas .band-civil_twilight {
+  background: #8b5cf6;
+}
+
+.timeline-canvas .band-blue_hour {
+  background: #3b82f6;
+}
+
+.timeline-canvas .band-meal {
+  background: #22c55e;
+}
+
+.timeline-canvas .band-custom {
+  background: #6b7280;
+}
+
+/* Lane type colors */
+.timeline-canvas .lane-ceremony .vis-item {
+  background: #ef4444;
+  border-color: #dc2626;
+}
+
+.timeline-canvas .lane-photo .vis-item {
+  background: #f59e0b;
+  border-color: #d97706;
+}
+
+.timeline-canvas .lane-transport .vis-item {
+  background: #3b82f6;
+  border-color: #2563eb;
+}
+
+.timeline-canvas .lane-meal .vis-item {
+  background: #22c55e;
+  border-color: #16a34a;
+}
+
+.timeline-canvas .lane-music .vis-item {
+  background: #8b5cf6;
+  border-color: #7c3aed;
+}
+
+.timeline-canvas .lane-vendor .vis-item {
+  background: #ec4899;
+  border-color: #db2777;
+}
+
+.timeline-canvas .lane-prep .vis-item {
+  background: #14b8a6;
+  border-color: #0d9488;
+}
+
+.timeline-canvas .lane-misc .vis-item,
+.timeline-canvas .lane-custom .vis-item {
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+}
+
+.timeline-canvas .vis-drag-center {
+  cursor: move;
+}
+
+.timeline-canvas .vis-drag-left,
+.timeline-canvas .vis-drag-right {
+  cursor: ew-resize;
+}

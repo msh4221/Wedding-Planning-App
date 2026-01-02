@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, usePathname } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth, MOCK_USERS } from "@/lib/mock-auth";
 import {
@@ -114,7 +114,7 @@ export default function WeddingLayout({
                   return (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild isActive={isActive}>
-                        <Link href={href}>
+                        <Link href={href} prefetch={false}>
                           <Icon />
                           <span>{item.title}</span>
                         </Link>
