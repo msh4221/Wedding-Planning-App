@@ -12,6 +12,7 @@ type UseCashManagementReturn = {
   // Actions
   refresh: () => Promise<void>;
   markMilestonePaid: (milestoneId: string) => Promise<boolean>;
+  markMilestoneUnpaid: (milestoneId: string) => Promise<boolean>;
   assignFundingSource: (milestoneId: string, fundingSourceId: string) => Promise<boolean>;
 };
 
@@ -71,6 +72,36 @@ export function useCashManagement(weddingId: string): UseCashManagementReturn {
     [weddingId, refresh]
   );
 
+  const markMilestoneUnpaid = useCallback(
+    async (milestoneId: string): Promise<boolean> => {
+      try {
+        const res = await fetch(`/api/weddings/${weddingId}/milestones/${milestoneId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: "planned",
+            paidDate: null,
+            paidAmount: null,
+            paymentMethod: null,
+            confirmationRef: null,
+          }),
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to mark milestone as unpaid");
+        }
+
+        // Refresh data
+        await refresh();
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to update");
+        return false;
+      }
+    },
+    [weddingId, refresh]
+  );
+
   const assignFundingSource = useCallback(
     async (milestoneId: string, fundingSourceId: string): Promise<boolean> => {
       try {
@@ -103,6 +134,7 @@ export function useCashManagement(weddingId: string): UseCashManagementReturn {
     error,
     refresh,
     markMilestonePaid,
+    markMilestoneUnpaid,
     assignFundingSource,
   };
 }

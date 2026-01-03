@@ -1,12 +1,13 @@
 "use client";
 
+import { useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useCanEditBudget } from "@/lib/mock-auth";
 import { useCashManagement } from "@/hooks/useCashManagement";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { PaymentTable } from "@/components/cash/PaymentTable";
 import { formatCurrency } from "@/types/cash";
 import { Loader2, AlertCircle, AlertTriangle, Info } from "lucide-react";
 
@@ -15,7 +16,54 @@ export default function CashManagementPage() {
   const weddingId = params.weddingId as string;
   const canEdit = useCanEditBudget();
 
-  const { data, isLoading, error, refresh, markMilestonePaid } = useCashManagement(weddingId);
+  const {
+    data,
+    isLoading,
+    error,
+    refresh,
+    markMilestonePaid,
+    markMilestoneUnpaid,
+  } = useCashManagement(weddingId);
+
+  // Separate payments into unpaid and paid, and calculate totals
+  const { unpaidPayments, paidPayments, totalPaid, totalScheduled, totalRemaining } = useMemo(() => {
+    if (!data?.upcomingMilestones) {
+      return {
+        unpaidPayments: [],
+        paidPayments: [],
+        totalPaid: 0,
+        totalScheduled: 0,
+        totalRemaining: 0
+      };
+    }
+
+    const unpaid = data.upcomingMilestones.filter((p) => p.status !== "paid");
+    const paid = data.upcomingMilestones.filter((p) => p.status === "paid");
+
+    // Calculate totals from actual payment data
+    const paidSum = paid.reduce((sum, p) => sum + p.amount, 0);
+    const unpaidSum = unpaid.reduce((sum, p) => sum + p.amount, 0);
+    const scheduledSum = paidSum + unpaidSum;
+
+    return {
+      unpaidPayments: unpaid,
+      paidPayments: paid,
+      totalPaid: paidSum,
+      totalScheduled: scheduledSum,
+      totalRemaining: unpaidSum
+    };
+  }, [data?.upcomingMilestones]);
+
+  // Count overdue payments
+  const overdueCount = useMemo(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return unpaidPayments.filter((p) => {
+      const due = new Date(p.dueDate);
+      due.setHours(0, 0, 0, 0);
+      return due < now;
+    }).length;
+  }, [unpaidPayments]);
 
   if (isLoading) {
     return (
@@ -53,12 +101,6 @@ export default function CashManagementPage() {
       </div>
     );
   }
-
-  const handleMarkPaid = async (milestoneId: string) => {
-    if (confirm("Mark this payment as paid?")) {
-      await markMilestonePaid(milestoneId);
-    }
-  };
 
   const getAlertIcon = (severity: string) => {
     switch (severity) {
@@ -126,12 +168,12 @@ export default function CashManagementPage() {
           <CardHeader className="pb-2">
             <CardDescription>Total Scheduled</CardDescription>
             <CardTitle className="text-2xl">
-              {formatCurrency(data.summary.totalScheduledPayments)}
+              {formatCurrency(totalScheduled)}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xs text-muted-foreground">
-              {data.upcomingMilestones.length} payment{data.upcomingMilestones.length !== 1 ? "s" : ""} planned
+              {unpaidPayments.length + paidPayments.length} payment{(unpaidPayments.length + paidPayments.length) !== 1 ? "s" : ""} total
             </p>
           </CardContent>
         </Card>
@@ -140,14 +182,12 @@ export default function CashManagementPage() {
           <CardHeader className="pb-2">
             <CardDescription>Total Paid</CardDescription>
             <CardTitle className="text-2xl text-green-600">
-              {formatCurrency(data.summary.totalPaid)}
+              {formatCurrency(totalPaid)}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xs text-muted-foreground">
-              {data.summary.totalScheduledPayments > 0
-                ? Math.round((data.summary.totalPaid / data.summary.totalScheduledPayments) * 100)
-                : 0}% of total
+              {paidPayments.length} payment{paidPayments.length !== 1 ? "s" : ""} completed
             </p>
           </CardContent>
         </Card>
@@ -155,13 +195,15 @@ export default function CashManagementPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Remaining</CardDescription>
-            <CardTitle className="text-2xl">
-              {formatCurrency(data.summary.totalScheduledPayments - data.summary.totalPaid)}
+            <CardTitle className={`text-2xl ${overdueCount > 0 ? "text-red-600" : ""}`}>
+              {formatCurrency(totalRemaining)}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-xs text-muted-foreground">
-              {data.summary.unallocatedCount} unallocated
+            <p className={`text-xs ${overdueCount > 0 ? "text-red-500 font-medium" : "text-muted-foreground"}`}>
+              {overdueCount > 0
+                ? `${overdueCount} payment${overdueCount !== 1 ? "s" : ""} overdue!`
+                : `${unpaidPayments.length} payment${unpaidPayments.length !== 1 ? "s" : ""} pending`}
             </p>
           </CardContent>
         </Card>
@@ -213,65 +255,75 @@ export default function CashManagementPage() {
         </CardContent>
       </Card>
 
-      {/* Upcoming Payments */}
+      {/* Unpaid Payments Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Upcoming Payments</CardTitle>
-          <CardDescription>Next payments due</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                Unpaid Payments
+                {overdueCount > 0 && (
+                  <span className="text-sm bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-normal">
+                    {overdueCount} overdue
+                  </span>
+                )}
+              </CardTitle>
+              <CardDescription>
+                Payments pending - click to mark as paid
+              </CardDescription>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold">
+                {formatCurrency(unpaidPayments.reduce((sum, p) => sum + p.amount, 0))}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {unpaidPayments.length} payment{unpaidPayments.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {data.upcomingMilestones.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">
-              No upcoming payments scheduled
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {data.upcomingMilestones.map((payment) => (
-                <div
-                  key={payment.id}
-                  className="flex items-center justify-between p-3 rounded-lg border"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="text-sm text-muted-foreground w-24">
-                      {new Date(payment.dueDate).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </div>
-                    <div>
-                      <p className="font-medium">{payment.label}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {payment.vendorName || payment.categoryName || "Unassigned"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-medium">{formatCurrency(payment.amount)}</span>
-                    <Badge
-                      variant={
-                        payment.status === "paid"
-                          ? "default"
-                          : payment.status === "due"
-                          ? "destructive"
-                          : "secondary"
-                      }
-                    >
-                      {payment.status}
-                    </Badge>
-                    {canEdit && payment.status !== "paid" && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleMarkPaid(payment.id)}
-                      >
-                        Mark Paid
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
+          <PaymentTable
+            payments={unpaidPayments}
+            variant="unpaid"
+            canEdit={canEdit}
+            onToggleStatus={markMilestonePaid}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Paid Payments Table */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                Paid Payments
+                <span className="text-sm bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-normal">
+                  {paidPayments.length} completed
+                </span>
+              </CardTitle>
+              <CardDescription>
+                Completed payments - click to revert if needed
+              </CardDescription>
             </div>
-          )}
+            <div className="text-right">
+              <p className="text-2xl font-bold text-green-600">
+                {formatCurrency(paidPayments.reduce((sum, p) => sum + p.amount, 0))}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {paidPayments.length} payment{paidPayments.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <PaymentTable
+            payments={paidPayments}
+            variant="paid"
+            canEdit={canEdit}
+            onToggleStatus={markMilestoneUnpaid}
+          />
         </CardContent>
       </Card>
 

@@ -31,10 +31,24 @@
   padding: 2px 8px;
 }
 
-.timeline-canvas .vis-item.selected {
+.timeline-canvas .vis-item.vis-selected {
   background: hsl(var(--primary) / 0.9);
   border-color: hsl(var(--ring));
   box-shadow: 0 0 0 2px hsl(var(--ring));
+}
+
+/* Also support lane-specific selection styling */
+.timeline-canvas .lane-ceremony .vis-item.vis-selected,
+.timeline-canvas .lane-photo .vis-item.vis-selected,
+.timeline-canvas .lane-transport .vis-item.vis-selected,
+.timeline-canvas .lane-meal .vis-item.vis-selected,
+.timeline-canvas .lane-music .vis-item.vis-selected,
+.timeline-canvas .lane-vendor .vis-item.vis-selected,
+.timeline-canvas .lane-prep .vis-item.vis-selected,
+.timeline-canvas .lane-misc .vis-item.vis-selected,
+.timeline-canvas .lane-custom .vis-item.vis-selected {
+  box-shadow: 0 0 0 2px hsl(var(--ring));
+  filter: brightness(1.1);
 }
 
 .timeline-canvas .vis-item.vis-range {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useMemo } from "react";
+import { useEffect, useRef, useCallback, useMemo, useState } from "react";
 import type { TimelineEventItem, TimelineLane, TimelineBackgroundBand } from "@/types/timeline";
 import { DateTime } from "luxon";
 import "./timeline-canvas.css";
@@ -22,6 +22,29 @@ type TimelineCanvasProps = {
 // Lifecycle states for the timeline component
 type LifecycleState = 'idle' | 'initializing' | 'ready' | 'destroying';
 
+// Module cache for vis-timeline (loaded once, reused)
+let visModulesPromise: Promise<{ Timeline: any; DataSet: any }> | null = null;
+
+async function loadVisModules() {
+  if (!visModulesPromise) {
+    visModulesPromise = (async () => {
+      // Load CSS once
+      await import("vis-timeline/styles/vis-timeline-graph2d.css");
+      const [{ Timeline }, { DataSet }] = await Promise.all([
+        import("vis-timeline/standalone"),
+        import("vis-data/standalone"),
+      ]);
+      return { Timeline, DataSet };
+    })();
+  }
+  return visModulesPromise;
+}
+
+// Preload modules when this file is imported
+if (typeof window !== 'undefined') {
+  loadVisModules();
+}
+
 export function TimelineCanvas({
   events,
   lanes,
@@ -42,6 +65,7 @@ export function TimelineCanvas({
 
   // Lifecycle state machine to prevent race conditions
   const lifecycleRef = useRef<LifecycleState>('idle');
+  const [isReady, setIsReady] = useState(false);
 
   // Store callbacks in refs to avoid effect dependency changes
   const callbacksRef = useRef({
@@ -50,117 +74,125 @@ export function TimelineCanvas({
     onUpdateEventLane,
   });
 
-  // Keep callbacks ref updated
-  useEffect(() => {
-    callbacksRef.current = {
-      onSelectEvent,
-      onUpdateEventTime,
-      onUpdateEventLane,
-    };
-  }, [onSelectEvent, onUpdateEventTime, onUpdateEventLane]);
+  // Keep callbacks ref updated (no dependency array - runs every render but cheap)
+  callbacksRef.current = {
+    onSelectEvent,
+    onUpdateEventTime,
+    onUpdateEventLane,
+  };
 
-  // Convert UTC to venue timezone for display
+  // Memoize timezone to prevent unnecessary recalculations
+  const timezoneRef = useRef(venueTimezone);
+  timezoneRef.current = venueTimezone;
+
+  // Convert UTC to venue timezone for display - stable function
   const toVenueTime = useCallback(
-    (utc: string) => DateTime.fromISO(utc, { zone: "utc" }).setZone(venueTimezone),
-    [venueTimezone]
+    (utc: string) => DateTime.fromISO(utc, { zone: "utc" }).setZone(timezoneRef.current),
+    [] // No dependencies - uses ref
   );
 
-  // Convert venue time back to UTC
+  // Convert venue time back to UTC - stable function
   const toUtc = useCallback(
-    (date: Date) => DateTime.fromJSDate(date).setZone(venueTimezone, { keepLocalTime: true }).toUTC().toISO(),
-    [venueTimezone]
+    (date: Date) => DateTime.fromJSDate(date).setZone(timezoneRef.current, { keepLocalTime: true }).toUTC().toISO(),
+    [] // No dependencies - uses ref
   );
 
-  // Snap to nearest minute
+  // Snap to nearest minute - completely stable
   const snapToMinute = useCallback((date: Date): Date => {
     const dt = DateTime.fromJSDate(date);
     return dt.set({ second: 0, millisecond: 0 }).toJSDate();
   }, []);
 
-  // Transform lanes to vis-timeline groups
+  // Transform lanes to vis-timeline groups - only when lanes change
   const groups = useMemo(() => {
     return lanes
-      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .filter((lane) => lane && lane.id) // Filter out undefined/invalid lanes
+      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
       .map((lane) => ({
         id: lane.id,
-        content: lane.name,
-        className: `lane-${lane.laneType.toLowerCase()}`,
+        content: lane.name || '',
+        className: `lane-${(lane.laneType || 'misc').toLowerCase()}`,
       }));
   }, [lanes]);
 
-  // Transform events to vis-timeline items
+  // Transform events to vis-timeline items - NO selectedEventId dependency!
+  // Selection is handled by vis-timeline's setSelection() method
   const items = useMemo(() => {
-    return events.map((event) => {
-      const start = toVenueTime(event.startUtc).toJSDate();
-      const end = toVenueTime(event.endUtc).toJSDate();
+    const tz = timezoneRef.current;
+    return events
+      .filter((event) => event && event.id && event.startUtc && event.endUtc) // Filter invalid events
+      .map((event) => {
+        const start = DateTime.fromISO(event.startUtc, { zone: "utc" }).setZone(tz).toJSDate();
+        const end = DateTime.fromISO(event.endUtc, { zone: "utc" }).setZone(tz).toJSDate();
 
-      return {
-        id: event.id,
-        group: event.laneId,
-        content: event.title,
-        start,
-        end,
-        className: `event-item ${selectedEventId === event.id ? "selected" : ""}`,
-        editable: !readOnly
-          ? {
-              updateTime: true,
-              updateGroup: true,
-              remove: false,
-            }
-          : false,
-      };
-    });
-  }, [events, toVenueTime, selectedEventId, readOnly]);
+        return {
+          id: event.id,
+          group: event.laneId,
+          content: event.title || '',
+          start,
+          end,
+          className: "event-item",
+          editable: !readOnly
+            ? {
+                updateTime: true,
+                updateGroup: true,
+                remove: false,
+              }
+            : false,
+        };
+      });
+  }, [events, readOnly]);
 
-  // Transform background bands
+  // Transform background bands - only when bands change
   const backgroundItems = useMemo(() => {
-    return bands.map((band) => ({
-      id: `band-${band.id}`,
-      content: band.label,
-      start: toVenueTime(band.startUtc).toJSDate(),
-      end: toVenueTime(band.endUtc).toJSDate(),
-      type: "background",
-      className: `background-band band-${band.bandType.toLowerCase()}`,
-    }));
-  }, [bands, toVenueTime]);
+    const tz = timezoneRef.current;
+    return bands
+      .filter((band) => band && band.id && band.startUtc && band.endUtc) // Filter invalid bands
+      .map((band) => ({
+        id: `band-${band.id}`,
+        content: band.label || '',
+        start: DateTime.fromISO(band.startUtc, { zone: "utc" }).setZone(tz).toJSDate(),
+        end: DateTime.fromISO(band.endUtc, { zone: "utc" }).setZone(tz).toJSDate(),
+        type: "background",
+        className: `background-band band-${(band.bandType || 'custom').toLowerCase()}`,
+      }));
+  }, [bands]);
 
   // Store current events in ref for move handler
   const eventsRef = useRef(events);
-  useEffect(() => {
-    eventsRef.current = events;
-  }, [events]);
+  eventsRef.current = events;
 
-  // EFFECT 1: Initialize and cleanup timeline (consolidated)
+  // Track previous data for efficient updates
+  const prevDataRef = useRef<{
+    groups: typeof groups;
+    items: typeof items;
+    backgroundItems: typeof backgroundItems;
+  } | null>(null);
+
+  // EFFECT 1: Initialize and cleanup timeline
   useEffect(() => {
     if (!containerRef.current) return;
-    if (lifecycleRef.current !== 'idle') return; // Prevent re-initialization
+    if (lifecycleRef.current !== 'idle') return;
 
     lifecycleRef.current = 'initializing';
 
     let mounted = true;
-    let timelineInstance: any = null;
-    let itemsInstance: any = null;
-    let groupsInstance: any = null;
 
     const initTimeline = async () => {
       try {
-        // Dynamically import vis-timeline CSS and modules
-        await import("vis-timeline/styles/vis-timeline-graph2d.css");
-        const [{ Timeline }, { DataSet }] = await Promise.all([
-          import("vis-timeline/standalone"),
-          import("vis-data/standalone"),
-        ]);
+        const { Timeline, DataSet } = await loadVisModules();
 
         if (!mounted || !containerRef.current || lifecycleRef.current === 'destroying') {
           return;
         }
 
         // Create DataSets
-        itemsInstance = new DataSet();
-        groupsInstance = new DataSet();
+        const itemsInstance = new DataSet();
+        const groupsInstance = new DataSet();
 
-        const windowStart = toVenueTime(windowStartUtc).toJSDate();
-        const windowEnd = toVenueTime(windowEndUtc).toJSDate();
+        const tz = timezoneRef.current;
+        const windowStart = DateTime.fromISO(windowStartUtc, { zone: "utc" }).setZone(tz).toJSDate();
+        const windowEnd = DateTime.fromISO(windowEndUtc, { zone: "utc" }).setZone(tz).toJSDate();
 
         const options = {
           editable: !readOnly
@@ -192,9 +224,7 @@ export function TimelineCanvas({
             followMouse: true,
             overflowMethod: "cap" as const,
           },
-          // Set up onMove handler during initialization
           onMove: !readOnly ? (item: any, callback: (item: any) => void) => {
-            // Guard against operations during cleanup
             if (lifecycleRef.current !== 'ready') {
               callback(null);
               return;
@@ -203,13 +233,11 @@ export function TimelineCanvas({
             const snappedStart = snapToMinute(item.start);
             const snappedEnd = snapToMinute(item.end);
 
-            // Check bounds
             if (snappedStart < windowStart || snappedEnd > windowEnd) {
               callback(null);
               return;
             }
 
-            // Ensure minimum duration of 1 minute
             if (snappedEnd.getTime() - snappedStart.getTime() < 60000) {
               callback(null);
               return;
@@ -219,7 +247,6 @@ export function TimelineCanvas({
             const endUtc = toUtc(snappedEnd);
 
             if (startUtc && endUtc) {
-              // Find original event to check if lane changed
               const originalEvent = eventsRef.current.find((e) => e.id === item.id);
               if (originalEvent && originalEvent.laneId !== item.group) {
                 callbacksRef.current.onUpdateEventLane(item.id, item.group);
@@ -227,26 +254,23 @@ export function TimelineCanvas({
               callbacksRef.current.onUpdateEventTime(item.id, startUtc, endUtc);
             }
 
-            // Update item with snapped values
             item.start = snappedStart;
             item.end = snappedEnd;
             callback(item);
           } : undefined,
         };
 
-        timelineInstance = new Timeline(
+        const timelineInstance = new Timeline(
           containerRef.current,
           itemsInstance,
           groupsInstance,
           options
         );
 
-        // Handle selection
         timelineInstance.on("select", (properties: { items: string[] }) => {
           if (lifecycleRef.current !== 'ready') return;
 
           const selectedId = properties.items[0] || null;
-          // Filter out background band selections
           if (selectedId && selectedId.startsWith("band-")) {
             callbacksRef.current.onSelectEvent(null);
           } else {
@@ -254,13 +278,12 @@ export function TimelineCanvas({
           }
         });
 
-        // Store refs
         timelineRef.current = timelineInstance;
         itemsRef.current = itemsInstance;
         groupsRef.current = groupsInstance;
 
-        // Mark as ready
         lifecycleRef.current = 'ready';
+        setIsReady(true);
       } catch (error) {
         console.error("Failed to initialize timeline:", error);
         lifecycleRef.current = 'idle';
@@ -272,95 +295,127 @@ export function TimelineCanvas({
     return () => {
       mounted = false;
 
-      // Prevent double cleanup
       if (lifecycleRef.current === 'destroying' || lifecycleRef.current === 'idle') {
         return;
       }
 
       lifecycleRef.current = 'destroying';
+      setIsReady(false);
 
-      // Capture refs before nullifying
       const timeline = timelineRef.current;
       const items = itemsRef.current;
       const groups = groupsRef.current;
 
-      // Nullify refs immediately to prevent access from other code
       timelineRef.current = null;
       itemsRef.current = null;
       groupsRef.current = null;
+      prevDataRef.current = null;
 
-      // Clean up event listeners
       if (timeline) {
         try {
           timeline.off("select");
-        } catch (e) {
-          // Ignore
-        }
+        } catch (e) {}
       }
 
-      // Clear DataSets before destroying timeline
       if (items) {
-        try {
-          items.clear();
-        } catch (e) {
-          // Ignore
-        }
+        try { items.clear(); } catch (e) {}
       }
       if (groups) {
-        try {
-          groups.clear();
-        } catch (e) {
-          // Ignore
-        }
+        try { groups.clear(); } catch (e) {}
       }
 
-      // Delay destroy to let pending handlers complete
       if (timeline) {
         requestAnimationFrame(() => {
           try {
             timeline.destroy();
-          } catch (e) {
-            // Ignore cleanup errors
-          }
-          // Reset lifecycle state after destruction is complete
+          } catch (e) {}
           lifecycleRef.current = 'idle';
         });
       } else {
         lifecycleRef.current = 'idle';
       }
     };
-  }, [windowStartUtc, windowEndUtc, venueTimezone, readOnly, snapToMinute, toVenueTime, toUtc]);
+  }, [windowStartUtc, windowEndUtc, readOnly, snapToMinute, toUtc]);
 
-  // EFFECT 2: Sync data (groups, items, selection) when props change
+  // EFFECT 2: Sync data efficiently when props change
   useEffect(() => {
-    // Only sync when timeline is ready
     if (lifecycleRef.current !== 'ready') return;
     if (!groupsRef.current || !itemsRef.current || !timelineRef.current) return;
 
     try {
-      // Update groups
-      groupsRef.current.clear();
-      groupsRef.current.add(groups);
+      const prev = prevDataRef.current;
+      const allItems = [...items, ...backgroundItems];
 
-      // Update items (events + background bands)
-      itemsRef.current.clear();
-      itemsRef.current.add([...items, ...backgroundItems]);
+      if (!prev) {
+        // First sync - add all data
+        groupsRef.current.add(groups);
+        itemsRef.current.add(allItems);
+      } else {
+        // Efficient incremental updates for groups
+        if (prev.groups !== groups) {
+          const prevGroupIds = new Set(prev.groups.map(g => g.id));
+          const newGroupIds = new Set(groups.map(g => g.id));
 
-      // Update selection
+          // Remove deleted groups
+          const toRemove = prev.groups.filter(g => !newGroupIds.has(g.id)).map(g => g.id);
+          if (toRemove.length > 0) {
+            groupsRef.current.remove(toRemove);
+          }
+
+          // Update or add groups
+          const toUpdate = groups.filter(g => {
+            const prevGroup = prev.groups.find(pg => pg.id === g.id);
+            return !prevGroup || prevGroup.content !== g.content;
+          });
+          if (toUpdate.length > 0) {
+            groupsRef.current.update(toUpdate);
+          }
+        }
+
+        // Efficient incremental updates for items
+        if (prev.items !== items || prev.backgroundItems !== backgroundItems) {
+          const prevItemIds = new Set([...prev.items, ...prev.backgroundItems].map(i => i.id));
+          const newItemIds = new Set(allItems.map(i => i.id));
+
+          // Remove deleted items
+          const toRemove = [...prev.items, ...prev.backgroundItems]
+            .filter(i => !newItemIds.has(i.id))
+            .map(i => i.id);
+          if (toRemove.length > 0) {
+            itemsRef.current.remove(toRemove);
+          }
+
+          // Update or add items - use update() which handles both
+          if (allItems.length > 0) {
+            itemsRef.current.update(allItems);
+          }
+        }
+      }
+
+      // Save current data for next comparison
+      prevDataRef.current = { groups, items, backgroundItems };
+    } catch (e) {
+      // Ignore errors during data sync
+    }
+  }, [groups, items, backgroundItems]);
+
+  // EFFECT 3: Handle selection separately (very cheap operation)
+  useEffect(() => {
+    if (lifecycleRef.current !== 'ready' || !timelineRef.current) return;
+
+    try {
       if (selectedEventId) {
         timelineRef.current.setSelection([selectedEventId]);
       } else {
         timelineRef.current.setSelection([]);
       }
     } catch (e) {
-      // Ignore errors during data sync (component may be unmounting)
+      // Ignore errors
     }
-  }, [groups, items, backgroundItems, selectedEventId]);
-
-  const isReady = lifecycleRef.current === 'ready';
+  }, [selectedEventId]);
 
   return (
-    <div className="timeline-canvas-wrapper">
+    <div className="timeline-canvas-wrapper relative h-full">
       <div
         ref={containerRef}
         className="timeline-canvas h-full w-full"
