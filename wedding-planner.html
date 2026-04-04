@@ -1,0 +1,2076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emily & Matt's Wedding Planner</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #EDE9DC 0%, #ffffff 100%);
+      color: #333;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #2D4A6B 0%, #1C2B3A 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+      font-weight: 300;
+      letter-spacing: 1px;
+    }
+
+    .countdown {
+      font-size: 16px;
+      opacity: 0.95;
+      font-style: italic;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 10px;
+      padding: 15px 20px;
+      background: white;
+      border-bottom: 2px solid #EDE9DC;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .nav-tabs button {
+      padding: 10px 20px;
+      border: none;
+      background: #f5f5f5;
+      color: #333;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+
+    .nav-tabs button:hover {
+      background: #e0e0e0;
+    }
+
+    .nav-tabs button.active {
+      background: #2D4A6B;
+      color: white;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 0 20px;
+    }
+
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .summary-card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border-left: 4px solid #2D4A6B;
+    }
+
+    .summary-card h3 {
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .summary-card .value {
+      font-size: 28px;
+      color: #2D4A6B;
+      font-weight: 700;
+    }
+
+    .section-title {
+      font-size: 20px;
+      color: #1C2B3A;
+      margin-bottom: 20px;
+      font-weight: 600;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #EDE9DC;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .controls input[type="text"],
+    .controls select {
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .controls button {
+      padding: 10px 16px;
+      background: #2D4A6B;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .controls button:hover {
+      background: #1C2B3A;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(45, 74, 107, 0.3);
+    }
+
+    .controls button.secondary {
+      background: #b8860b;
+    }
+
+    .controls button.secondary:hover {
+      background: #8b6f00;
+    }
+
+    .items-grid {
+      display: grid;
+      gap: 15px;
+    }
+
+    .item-card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border: 1px solid #f0f0f0;
+      transition: all 0.3s;
+    }
+
+    .item-card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 15px;
+      gap: 10px;
+    }
+
+    .item-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      flex: 1;
+    }
+
+    .item-badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge.pending {
+      background: #EDE9DC;
+      color: #2D4A6B;
+    }
+
+    .badge.paid {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .badge.done {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .badge.in-progress {
+      background: #cfe2ff;
+      color: #084298;
+    }
+
+    .badge.high {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .badge.medium {
+      background: #dce8f3;
+      color: #2D4A6B;
+    }
+
+    .badge.low {
+      background: #d1ecf1;
+      color: #0c5460;
+    }
+
+    .item-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .detail-field {
+      font-size: 13px;
+      color: #666;
+    }
+
+    .detail-label {
+      font-weight: 600;
+      color: #999;
+      text-transform: uppercase;
+      font-size: 11px;
+      margin-bottom: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .detail-value {
+      color: #333;
+      font-size: 14px;
+    }
+
+    .amount {
+      font-weight: 700;
+      color: #2D4A6B;
+      font-size: 16px;
+    }
+
+    .item-notes {
+      margin-bottom: 15px;
+      padding: 12px;
+      background: #EDE9DC;
+      border-left: 3px solid #2D4A6B;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #555;
+      line-height: 1.5;
+    }
+
+    .item-inputs {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 15px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 8px 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #2D4A6B;
+      box-shadow: 0 0 0 3px rgba(45, 74, 107, 0.1);
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .btn-delete {
+      padding: 6px 12px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .btn-delete:hover {
+      background: #c82333;
+    }
+
+    .btn-save {
+      padding: 6px 12px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .btn-save:hover {
+      background: #218838;
+    }
+
+    .timeline-card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border: 2px solid #EDE9DC;
+      margin-bottom: 15px;
+      transition: all 0.3s;
+    }
+
+    .timeline-card.confirmed {
+      border-color: #28a745;
+    }
+
+    .timeline-card.tentative {
+      border-color: #4A7FA5;
+    }
+
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 15px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .timeline-time {
+      font-size: 18px;
+      font-weight: 700;
+      color: #2D4A6B;
+      min-width: 80px;
+    }
+
+    .timeline-event {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      flex: 1;
+    }
+
+    .timeline-status {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .timeline-status.confirmed {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .timeline-status.tentative {
+      background: #EDE9DC;
+      color: #2D4A6B;
+    }
+
+    .timeline-details {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #f0f0f0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .timeline-detail-item {
+      font-size: 13px;
+      color: #666;
+    }
+
+    .timeline-detail-label {
+      font-weight: 600;
+      color: #999;
+      text-transform: uppercase;
+      font-size: 11px;
+      margin-bottom: 2px;
+      letter-spacing: 0.5px;
+    }
+
+    .timeline-detail-value {
+      color: #333;
+      font-size: 14px;
+    }
+
+    .no-print {
+      print-display: none;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: #999;
+      font-size: 12px;
+      border-top: 1px solid #e0e0e0;
+      margin-top: 40px;
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 22px;
+      }
+
+      .summary-cards {
+        grid-template-columns: 1fr;
+      }
+
+      .item-details {
+        grid-template-columns: 1fr;
+      }
+
+      .nav-tabs {
+        flex-direction: column;
+      }
+
+      .nav-tabs button {
+        width: 100%;
+      }
+
+      .controls {
+        flex-direction: column;
+      }
+
+      .controls input[type="text"],
+      .controls select,
+      .controls button {
+        width: 100%;
+      }
+
+      .item-header {
+        flex-direction: column;
+      }
+
+      .item-badges {
+        justify-content: flex-start;
+      }
+    }
+
+    /* ── Compact Todo List ── */
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .filter-btn {
+      padding: 6px 14px;
+      border: 1px solid #ddd;
+      background: #f5f5f5;
+      color: #555;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .filter-btn:hover { background: #ececec; }
+
+    .filter-btn.active {
+      background: #2D4A6B;
+      color: white;
+      border-color: #2D4A6B;
+    }
+
+    .filter-btn.week-btn.active {
+      background: #2D4A6B;
+      border-color: #2D4A6B;
+    }
+
+    .todo-table {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+
+    .todo-section-header {
+      background: #f8f8f8;
+      padding: 8px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #888;
+      border-bottom: 1px solid #eee;
+    }
+
+    .todo-section-header.overdue-header { background: #fff3f3; color: #c0392b; }
+    .todo-section-header.soon-header { background: #edf1f5; color: #2D4A6B; }
+    .todo-section-header.active-header { background: #f0f7ff; color: #1565c0; }
+
+    .todo-row {
+      display: flex;
+      align-items: center;
+      padding: 9px 16px;
+      border-bottom: 1px solid #f0f0f0;
+      gap: 10px;
+      transition: background 0.15s;
+    }
+
+    .todo-row:last-child { border-bottom: none; }
+    .todo-row:hover { background: #fafafa; }
+    .todo-row.overdue { border-left: 3px solid #e74c3c; }
+    .todo-row.starts-soon { border-left: 3px solid #4A7FA5; }
+    .todo-row.in-progress-row { border-left: 3px solid #2196F3; }
+    .todo-row.done-row { opacity: 0.5; }
+
+    .priority-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .priority-dot.high { background: #e74c3c; }
+    .priority-dot.medium { background: #4A7FA5; }
+    .priority-dot.low { background: #bbb; }
+
+    .todo-desc {
+      flex: 1;
+      font-size: 13.5px;
+      color: #222;
+      line-height: 1.4;
+    }
+
+    .todo-row.done-row .todo-desc {
+      text-decoration: line-through;
+      color: #999;
+    }
+
+    .todo-dates {
+      font-size: 11.5px;
+      color: #888;
+      white-space: nowrap;
+      flex-shrink: 0;
+      text-align: right;
+    }
+
+    .todo-dates .start-label { color: #aaa; }
+    .todo-dates .due-label { color: #888; }
+    .todo-dates .due-label.overdue { color: #e74c3c; font-weight: 600; }
+    .todo-dates .due-label.due-soon { color: #4A7FA5; font-weight: 600; }
+
+    .status-toggle {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-weight: 600;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+
+    .status-toggle.pending { background: #EDE9DC; color: #2D4A6B; border-color: #c5cfdb; }
+    .status-toggle.in-progress { background: #e3f2fd; color: #1565c0; border-color: #bbdefb; }
+    .status-toggle.done { background: #e8f5e9; color: #2e7d32; border-color: #c8e6c9; }
+    .status-toggle:hover { opacity: 0.8; }
+
+    .todo-row-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .todo-row-actions button {
+      padding: 3px 8px;
+      font-size: 11px;
+      border: 1px solid #ddd;
+      background: white;
+      color: #555;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .todo-row-actions button:hover { background: #f5f5f5; }
+    .todo-row-actions .del-btn { color: #e74c3c; border-color: #f5c6c6; }
+    .todo-row-actions .del-btn:hover { background: #fff0f0; }
+
+    .week-banner {
+      background: linear-gradient(90deg, #2D4A6B, #4A7FA5);
+      color: white;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+
+    .todo-edit-row {
+      background: #EDE9DC;
+      border-left: 3px solid #4A7FA5;
+      padding: 12px 16px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .todo-edit-row .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .todo-edit-row .form-grid .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .todo-edit-row label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .todo-edit-row input,
+    .todo-edit-row select,
+    .todo-edit-row textarea {
+      width: 100%;
+      padding: 5px 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .todo-edit-row textarea { height: 50px; resize: vertical; }
+
+    .todo-edit-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* ── Swimlane Timeline ── */
+    .swimlane-wrapper {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      overflow-x: auto;
+      min-width: 600px;
+    }
+
+    .swimlane-header {
+      display: grid;
+      grid-template-columns: 68px 1fr 1fr 1fr;
+      border-bottom: 2px solid #2D4A6B;
+      background: white;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .lane-header-cell {
+      padding: 10px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      text-align: center;
+      border-left: 1px solid #eee;
+    }
+
+    .lane-header-cell.guests  { color: #4A7FA5; background: #e8f0f7; }
+    .lane-header-cell.party   { color: #2D4A6B; background: #e8edf5; }
+    .lane-header-cell.vendors { color: #5B8A65; background: #e8f2ea; }
+
+    .swimlane-body {
+      display: grid;
+      grid-template-columns: 68px 1fr 1fr 1fr;
+      position: relative;
+    }
+
+    .sl-time-col { position: relative; }
+
+    .sl-time-marker {
+      position: absolute;
+      right: 6px;
+      font-size: 9px;
+      color: #bbb;
+      line-height: 1;
+      transform: translateY(-50%);
+      white-space: nowrap;
+    }
+
+    .sl-time-marker.hour-mark { color: #888; font-weight: 600; font-size: 10px; }
+
+    .sl-lane-col { position: relative; border-left: 1px solid #ececec; }
+
+    .sl-grid-line {
+      position: absolute;
+      left: 0; right: 0;
+      height: 1px;
+      background: #f5f5f5;
+      pointer-events: none;
+    }
+
+    .sl-grid-line.hour-line { background: #e0e0e0; }
+
+    .sl-event {
+      position: absolute;
+      border-radius: 3px;
+      padding: 3px 5px;
+      font-size: 11px;
+      line-height: 1.25;
+      cursor: pointer;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+      transition: filter 0.15s, box-shadow 0.15s;
+      box-sizing: border-box;
+    }
+
+    .sl-event:hover { filter: brightness(0.93); box-shadow: 0 2px 6px rgba(0,0,0,0.18); }
+
+    .sl-event.guests  { background: #dce8f3; border-left: 3px solid #4A7FA5; color: #1C3A55; }
+    .sl-event.party   { background: #e0e7f2; border-left: 3px solid #2D4A6B; color: #1C2B3A; }
+    .sl-event.vendors { background: #daeae0; border-left: 3px solid #6B9E79; color: #2B4E34; }
+
+    .sl-event.tentative { opacity: 0.72; }
+    .sl-event.confirmed { opacity: 1; }
+    .sl-event.editing   { box-shadow: 0 0 0 2px #4A7FA5, 0 2px 8px rgba(0,0,0,0.2); opacity: 1; z-index: 10; }
+
+    .sl-event-time  { font-size: 9px; font-weight: 700; opacity: 0.65; line-height: 1.1; }
+    .sl-event-title { font-weight: 600; font-size: 10.5px; line-height: 1.25; }
+    .sl-event-resp  { font-size: 9.5px; opacity: 0.6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Edit panel */
+    .tl-edit-panel {
+      background: #EDE9DC;
+      border: 1px solid #4A7FA5;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .tl-edit-panel h4 { font-size: 13px; color: #1C2B3A; margin-bottom: 12px; font-weight: 700; }
+
+    .tl-edit-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .tl-edit-grid .span2 { grid-column: span 2; }
+    .tl-edit-grid .span4 { grid-column: span 4; }
+
+    .tl-edit-grid label {
+      font-size: 10px; font-weight: 700; color: #2D4A6B;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      display: block; margin-bottom: 3px;
+    }
+
+    .tl-edit-grid input,
+    .tl-edit-grid select,
+    .tl-edit-grid textarea {
+      width: 100%; padding: 5px 8px;
+      border: 1px solid #4A7FA5; border-radius: 4px; font-size: 13px;
+      background: white;
+    }
+
+    .tl-edit-grid textarea { height: 48px; resize: vertical; }
+
+    .lane-checks { display: flex; gap: 14px; flex-wrap: wrap; padding-top: 2px; }
+
+    .lane-check-item {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+
+    .lane-check-item.guests  { color: #4A7FA5; }
+    .lane-check-item.party   { color: #2D4A6B; }
+    .lane-check-item.vendors { color: #6B9E79; }
+
+    /* ── PRIVACY TOGGLE ──────────────────────────────────────────────────── */
+    .privacy-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #1C1C1C;
+      color: #EDE9DC;
+      padding: 10px 18px;
+      border-radius: 30px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.3s;
+    }
+    .privacy-toggle:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.5); transform: translateY(-1px); }
+    .privacy-toggle .toggle-track {
+      width: 40px; height: 22px;
+      background: #555;
+      border-radius: 11px;
+      position: relative;
+      transition: background 0.3s;
+    }
+    .privacy-toggle.active .toggle-track { background: #6B9E79; }
+    .privacy-toggle .toggle-thumb {
+      width: 18px; height: 18px;
+      background: white;
+      border-radius: 50%;
+      position: absolute;
+      top: 2px; left: 2px;
+      transition: left 0.3s;
+    }
+    .privacy-toggle.active .toggle-thumb { left: 20px; }
+
+    body.privacy-on .privacy-blur {
+      filter: blur(5px) !important;
+      pointer-events: none !important;
+      user-select: none !important;
+    }
+
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+
+      body {
+        background: white;
+      }
+
+      header {
+        position: static;
+      }
+
+      .timeline-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .nav-tabs {
+        display: none;
+      }
+
+      .controls {
+        display: none;
+      }
+
+      .summary-cards {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Emily & Matt's Wedding Planner</h1>
+    <div class="countdown" id="countdown">Loading...</div>
+    <div id="sync-status" style="font-size:11px;opacity:0.7;margin-top:4px;font-style:normal;letter-spacing:0;"></div>
+  </header>
+
+  <div class="nav-tabs">
+    <button class="tab-btn active" data-tab="cash">Cash Management</button>
+    <button class="tab-btn" data-tab="todos">To-Do List</button>
+    <button class="tab-btn" data-tab="timeline">Day-Of Timeline</button>
+  </div>
+
+  <div class="container">
+    <div id="content-area"></div>
+  </div>
+
+  <footer id="footer"></footer>
+
+  <div class="privacy-toggle" id="privacyToggle" onclick="togglePrivacy()">
+    <span id="privacyLabel">🔓 Demo Mode</span>
+    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+  </div>
+
+  <script>
+    // ============================================================================
+    // STATE MANAGEMENT
+    // ============================================================================
+
+    const WEDDING_DATE = new Date(2026, 10, 14);
+    const STORAGE_KEY = 'weddingPlanner_v2';
+    const LAST_SYNC = 'Apr 4, 2026'; // AUTO-UPDATED BY SCHEDULED TASK — DO NOT EDIT THIS LINE MANUALLY
+
+    const DEFAULT_DATA = {
+      cash: [
+        {id: 1, description: 'Barbara Lundgren - Wedding Planner (Barb Wired LLC)', type: 'out', category: 'Planner', amount: 9000, date: '2025-09-01', status: 'pending', notes: '$3,000 paid so far. Total fee $9,000'},
+        {id: 2, description: 'King Family Vineyards - Venue (incl. wine minimum)', type: 'out', category: 'Venue', amount: 13860, date: '2025-09-20', status: 'pending', notes: 'Base $12,000 + Service $360 + Wine Min $1,500. Deposit $6,180 paid 9/20/25'},
+        {id: 3, description: 'Harvest Moon Catering - All In (130 guests)', type: 'out', category: 'Catering', amount: 24199.56, date: '2025-10-09', status: 'pending', notes: 'Cocktail hr $2,600 + Salad $1,560 + Dinner $4,940 + Vendor meals $180 + Bar $1,430 + Rentals $2,754.70 + Event Team $4,762.50 + Svc 20% $3,094.50 + Gratuity $1,100 + Tax $1,777.86. Deposit $4,551.40 paid 10/9/25'},
+        {id: 4, description: 'A&A Limousine - 4 Buses Total', type: 'out', category: 'Transportation', amount: 5138.27, date: '2025-10-06', status: 'pending', notes: 'Sedan $237.77 + Mini Coach $1,012.50 + 2x Coach $3,888. Deposit $2,569.13 paid. Pickups: 11AM mini coach, 3:15PM x2 coaches, 10:30PM sedan'},
+        {id: 5, description: 'The Smiths Photography', type: 'out', category: 'Photography', amount: 6539.13, date: '2025-10-12', status: 'pending', notes: 'Contract signed via HoneyBook 10/12/25'},
+        {id: 6, description: 'Emily - Wedding Dress + Alterations', type: 'out', category: 'Attire', amount: 2812.60, date: '2026-06-01', status: 'pending', notes: 'Emily estimate'},
+        {id: 7, description: 'Derek Tobler / 20 South Productions - DJ', type: 'out', category: 'DJ/Music', amount: 2900, date: '2025-10-05', status: 'pending', notes: 'Contract signed via SignNow. Deposit paid via Venmo 10/5/25'},
+        {id: 8, description: 'Colonial Florist (Donna Graves) - Flowers', type: 'out', category: 'Flowers', amount: 4134.87, date: '2025-10-28', status: 'pending', notes: 'Bridal $200 + 5 Bridesmaids $350 + Boutonnieres $50 + Corsages $105 + Pedestals $550 + Barrels $370 + Hanging Jars $300 + Tables $1,125 + Cocktail $132 + Detail $20 + Cake $35 + Delivery $750 + Tax $170.37. 50% deposit $2,067.44 paid 11/14/25'},
+        {id: 9, description: 'Three Notch\'d Brewery - Welcome Party (Nov 13)', type: 'out', category: 'Welcome Party', amount: 6551.65, date: '2025-10-28', status: 'pending', notes: '$900 deposit paid. Final menu 14 days out, headcount 3 days before'},
+        {id: 10, description: 'Bird Cage Airbnb - Getting Ready Location', type: 'out', category: 'Venue', amount: 2475.75, date: '2025-11-14', status: 'paid', notes: 'Downtown mall, Charlottesville. Paid in full 11/14/25'},
+        {id: 11, description: 'Tom James Custom Suit (Katie Noriega)', type: 'out', category: 'Attire', amount: 3920.94, date: '2026-09-01', status: 'pending', notes: '$1,960.47 deposit paid 2/7/26 (Amex ending 1005). Gitman custom lining approved & signed 3/16/26. Order in production. Balance ~$1,960.47 due on delivery. Contact: k.noriega@tomjames.com / 256.507.4793'},
+        {id: 12, description: 'Invitations / Save the Dates', type: 'out', category: 'Stationery', amount: 2000, date: '2026-03-15', status: 'pending', notes: 'No response card needed. Sarah helping with website'},
+        {id: 13, description: 'Alcohol (BYO for wine service)', type: 'out', category: 'Alcohol', amount: 1599.15, date: '2026-10-01', status: 'pending', notes: 'Vodka, Bourbon, Gin, Tequila, Rum, Beer, High Noon. ~1,000 drinks for 130 guests over 5 hrs'},
+        {id: 14, description: 'Lighting / Decor (Carriage House)', type: 'out', category: 'Decor', amount: 769.42, date: '2026-10-01', status: 'pending', notes: 'Quote #q9867 for 11/14/2026 King Family Carriage House'},
+        {id: 15, description: 'Photo Booth Charlottesville', type: 'out', category: 'Entertainment', amount: 700, date: '2026-01-30', status: 'pending', notes: '$350 down payment paid 1/30/26. Balance $350 due'},
+        {id: 16, description: 'Custom Handkerchiefs - Groomsmen Gift', type: 'out', category: 'Gifts', amount: 600, date: '2026-10-01', status: 'pending', notes: 'Possible groomsmen gift'},
+        {id: 17, description: 'Insurance', type: 'out', category: 'Insurance', amount: 400, date: '2026-09-01', status: 'pending', notes: 'Barb estimate. Options: homeowner\'s policy, WedSafe, or agent'},
+        {id: 18, description: 'Rhett / Amby Services - Hair & Makeup', type: 'out', category: 'Beauty', amount: 350, date: '2026-11-14', status: 'pending', notes: 'Bride only ($350). Bridesmaids pay their own'},
+        {id: 19, description: 'Creative Costs', type: 'out', category: 'Other', amount: 100, date: '2026-10-01', status: 'pending', notes: 'Placeholder'},
+        {id: 20, description: 'John Asinger Contribution', type: 'in', category: 'Family', amount: 70000, date: '2025-09-17', status: 'pending', notes: 'Promised $70,000. Delivered $9,999 on 9/17/25. Remaining: $60,001'},
+        {id: 21, description: 'Frank Horrigan Contribution', type: 'in', category: 'Family', amount: 25000, date: '2025-10-01', status: 'pending', notes: 'Promised $25,000. Delivered $9,999 on 10/1/25. Remaining: $15,001'},
+        {id: 22, description: 'Matt + Emily Personal Contribution', type: 'in', category: 'Personal', amount: 0, date: '2026-03-01', status: 'pending', notes: 'Update as personal funds contributed'}
+      ],
+      todos: [
+        {id: 1, description: 'Finalize save-the-dates design (Minted) — choose template, add photo, proof copy', month: '2026-03', startDate: '2026-03-13', dueDate: '2026-03-31', status: 'pending', priority: 'high', notes: ''},
+        {id: 2, description: 'Mail save-the-dates — print, address envelopes, stamp, drop at post office', month: '2026-03', startDate: '2026-03-25', dueDate: '2026-03-31', status: 'pending', priority: 'high', notes: ''},
+        {id: 3, description: 'Confirm photo booth booking ($700) — verify date/time with vendor, get contract', month: '2026-03', startDate: '2026-03-01', dueDate: '2026-03-31', status: 'done', priority: 'medium', notes: ''},
+        {id: 4, description: 'Begin invitation design — select stationer, draft wording, include RSVP date + website URL', month: '2026-04', startDate: '2026-04-01', dueDate: '2026-04-30', status: 'pending', priority: 'high', notes: ''},
+        {id: 5, description: 'Select wedding wine for KFV free wine service — choose 2 whites + 2 reds, notify Sammi Jones', month: '2026-04', startDate: '2026-04-15', dueDate: '2026-04-30', status: 'pending', priority: 'medium', notes: ''},
+        {id: 6, description: 'Finalize BYO alcohol quantities — use BevMo calc for 130 guests × 5hrs, confirm spirits list', month: '2026-04', startDate: '2026-04-15', dueDate: '2026-04-30', status: 'pending', priority: 'medium', notes: ''},
+        {id: 7, description: 'S\'mores station decision — confirm with Sammi (HM Catering can run it) or order Etsy kits', month: '2026-04', startDate: '2026-04-15', dueDate: '2026-04-30', status: 'pending', priority: 'low', notes: ''},
+        {id: 8, description: 'Mail invitations — confirm final print run, stuff + seal envelopes, mail (8 weeks before wedding)', month: '2026-05', startDate: '2026-05-01', dueDate: '2026-05-31', status: 'pending', priority: 'high', notes: ''},
+        {id: 9, description: 'Reserve hotel room block — call Hilton Garden Inn Charlottesville, negotiate group rate', month: '2026-05', startDate: '2026-05-01', dueDate: '2026-05-31', status: 'pending', priority: 'low', notes: ''},
+        {id: 10, description: 'Draft rehearsal dinner plan — headcount, menu style, set-up time at KFV Pavilion with Barb', month: '2026-05', startDate: '2026-05-01', dueDate: '2026-05-31', status: 'pending', priority: 'medium', notes: ''},
+        {id: 11, description: 'Open RSVP tracking spreadsheet — log responses by name, meal pref, +1, dietary restrictions', month: '2026-06', startDate: '2026-06-01', dueDate: '2026-06-30', status: 'pending', priority: 'high', notes: ''},
+        {id: 12, description: 'Finalize bridal party logistics — confirm attire, shoe color, bouquet pickup, transportation plans', month: '2026-06', startDate: '2026-06-01', dueDate: '2026-06-30', status: 'pending', priority: 'high', notes: ''},
+        {id: 13, description: 'Chase outstanding RSVPs — email/call non-responders, update headcount in tracker', month: '2026-07', startDate: '2026-07-01', dueDate: '2026-07-31', status: 'pending', priority: 'medium', notes: ''},
+        {id: 14, description: 'Begin table assignments — map seating chart by table, cross-ref with RSVP list + meal prefs', month: '2026-07', startDate: '2026-07-15', dueDate: '2026-07-31', status: 'pending', priority: 'high', notes: ''},
+        {id: 15, description: 'Lock in Bird Cage Airbnb for bridal party Nov 12–14 — confirm check-in time, capacity, key pickup', month: '2026-07', startDate: '2026-07-01', dueDate: '2026-07-31', status: 'pending', priority: 'medium', notes: ''},
+        {id: 16, description: 'Schedule final KFV walkthrough with Sammi + Kat — bring timeline, confirm fire pit, layout, parking', month: '2026-08', startDate: '2026-08-15', dueDate: '2026-08-31', status: 'pending', priority: 'high', notes: ''},
+        {id: 17, description: 'Final Harvest Moon Catering walkthrough — review timeline, family-style setup, vendor meal count', month: '2026-08', startDate: '2026-08-15', dueDate: '2026-08-31', status: 'pending', priority: 'high', notes: ''},
+        {id: 18, description: 'Confirm fireplace + fire pit activation with KFV — verify ceremony timing, wood/gas, who lights it', month: '2026-08', startDate: '2026-08-15', dueDate: '2026-08-31', status: 'pending', priority: 'medium', notes: ''},
+        {id: 19, description: 'Lock in final guest count — close RSVP list, total headcount to Barb + all vendors', month: '2026-09', startDate: '2026-09-15', dueDate: '2026-09-30', status: 'pending', priority: 'high', notes: ''},
+        {id: 20, description: 'Send final table count to Donna (Colonial Florist) — confirmed # of tables, centerpiece qty', month: '2026-09', startDate: '2026-09-25', dueDate: '2026-09-30', status: 'pending', priority: 'medium', notes: ''},
+        {id: 21, description: 'Submit final menu selections to Harvest Moon — confirm mains, sides, dietary options (deadline: Oct 14)', month: '2026-10', startDate: '2026-09-30', dueDate: '2026-10-14', status: 'pending', priority: 'high', notes: ''},
+        {id: 22, description: 'Send final headcount + table layout to Colonial Florist Donna — 1 month deadline (Oct 14)', month: '2026-10', startDate: '2026-10-07', dueDate: '2026-10-14', status: 'pending', priority: 'high', notes: ''},
+        {id: 23, description: 'Finalize Three Notch\'d welcome party menu — select food/drink package, submit to venue (due Oct 30)', month: '2026-10', startDate: '2026-10-16', dueDate: '2026-10-30', status: 'pending', priority: 'high', notes: ''},
+        {id: 24, description: 'Submit final guest count to Three Notch\'d — 3 days before Nov 13 party (due Nov 10)', month: '2026-11', startDate: '2026-11-07', dueDate: '2026-11-10', status: 'pending', priority: 'high', notes: ''},
+        {id: 25, description: 'Confirm all vendor final balances — KFV, HM Catering, Smiths Photo, DJ, Florist, A&A, Barb', month: '2026-10', startDate: '2026-10-01', dueDate: '2026-10-31', status: 'pending', priority: 'high', notes: ''},
+        {id: 26, description: 'Book hair/makeup trial with Rhett (Amby Services) — test bridal look, confirm Nov 14 call time', month: '2026-10', startDate: '2026-10-01', dueDate: '2026-10-31', status: 'pending', priority: 'medium', notes: ''},
+        {id: 27, description: 'Prepare vendor tip envelopes — calculate gratuity per vendor, label + stuff cash envelopes', month: '2026-10', startDate: '2026-10-15', dueDate: '2026-10-31', status: 'pending', priority: 'medium', notes: ''},
+        {id: 28, description: 'Nov 12: Travel to Charlottesville — confirm flights/drive, check into Bird Cage Airbnb', month: '2026-11', startDate: '2026-11-12', dueDate: '2026-11-12', status: 'pending', priority: 'high', notes: ''},
+        {id: 29, description: 'Nov 13: Host rehearsal dinner at KFV Pavilion — run ceremony walkthrough with officiant + bridal party', month: '2026-11', startDate: '2026-11-13', dueDate: '2026-11-13', status: 'pending', priority: 'high', notes: ''},
+        {id: 30, description: 'Nov 13: Welcome party at Three Notch\'d Brewery — greet guests, enjoy the night before the wedding', month: '2026-11', startDate: '2026-11-13', dueDate: '2026-11-13', status: 'pending', priority: 'high', notes: ''},
+        {id: 31, description: 'Schedule Tom James final fitting with Katie Noriega — suit in production, custom Gitman lining approved 3/16. Coordinate fitting appointment for Sept/Oct, pay balance ~$1,960.47', month: '2026-09', startDate: '2026-08-01', dueDate: '2026-09-30', status: 'in-progress', priority: 'high', notes: 'Lining approved & signed 3/16/26. Katie: k.noriega@tomjames.com / 256.507.4793'},
+        {id: 32, description: 'Review and respond to Harvest Moon Catering updated proposal — Sammi sent revised Asinger-Horrigan proposal (PDF) reflecting post-tasting menu and rental selections; confirm accuracy or flag any discrepancies with Sammi', month: '2026-04', startDate: '2026-04-04', dueDate: '2026-04-14', status: 'pending', priority: 'high', notes: 'source: "Updated Proposal" from Sammi Jones (sammi@hmcatering.com), Mar 31, 2026'}
+      ],
+      timeline: [
+        {id: 1,  time:'08:00', duration:15,  lanes:['vendors'],           event:'Hair & Makeup team (Rhett/Amby Services) arrives',          location:'Bird Cage Airbnb, Downtown Mall',  responsible:'Rhett/Amby Services',                  status:'tentative', notes:''},
+        {id: 2,  time:'08:15', duration:105, lanes:['party'],             event:'Bridesmaids begin hair & makeup',                           location:'Bird Cage Airbnb',                 responsible:'Rhett/Amby Services',                  status:'tentative', notes:''},
+        {id: 3,  time:'08:30', duration:60,  lanes:['party'],             event:'Breakfast/snacks for bridal party',                         location:'Bird Cage Airbnb',                 responsible:'TBD',                                  status:'tentative', notes:''},
+        {id: 4,  time:'10:00', duration:150, lanes:['party'],             event:'Bride begins hair & makeup',                                location:'Bird Cage Airbnb',                 responsible:'Rhett/Amby Services',                  status:'tentative', notes:''},
+        {id: 5,  time:'11:00', duration:60,  lanes:['party','vendors'],   event:'A&A Bus 2 (Mini Coach) picks up wedding party gear',        location:'Bird Cage Airbnb → KFV',           responsible:'A&A Limousine',                        status:'tentative', notes:'Mini Coach, 5hr rental. Loaded with equipment, party rides to KFV'},
+        {id: 6,  time:'11:30', duration:150, lanes:['party'],             event:'Groomsmen getting ready',                                   location:'TBD',                              responsible:'Groom/Best Man',                       status:'tentative', notes:''},
+        {id: 7,  time:'12:00', duration:180, lanes:['vendors'],           event:'Harvest Moon Catering begins setup',                        location:'King Family Vineyards',            responsible:'Sammi Jones (540-894-6087)',            status:'tentative', notes:''},
+        {id: 8,  time:'12:00', duration:90,  lanes:['vendors'],           event:'Colonial Florist delivers and sets up florals',             location:'King Family Vineyards',            responsible:'Donna Graves (colonialfls@verizon.net)',status:'tentative', notes:''},
+        {id: 9,  time:'13:00', duration:120, lanes:['vendors'],           event:'DJ begins setup',                                           location:'King Family Vineyards',            responsible:'Derek Tobler / 20 South Productions',  status:'tentative', notes:''},
+        {id: 10, time:'14:00', duration:60,  lanes:['vendors'],           event:'The Smiths Photography arrives for getting-ready photos',   location:'Bird Cage Airbnb',                 responsible:'Amy - The Smiths Photography',          status:'tentative', notes:''},
+        {id: 11, time:'14:30', duration:30,  lanes:['vendors'],           event:'Photo Booth setup',                                         location:'King Family Vineyards',            responsible:'Photo Booth Charlottesville',           status:'tentative', notes:''},
+        {id: 12, time:'15:00', duration:30,  lanes:['vendors'],           event:'Wedding planner final venue check',                         location:'King Family Vineyards',            responsible:'Barbara Lundgren (434-531-3247)',       status:'tentative', notes:''},
+        {id: 13, time:'15:15', duration:30,  lanes:['guests','vendors'],  event:'A&A Bus 3 + Bus 4 (Coaches) pick up guests from hotels',   location:'Holiday Inn → KFV',                responsible:'A&A Limousine',                        status:'tentative', notes:'Two 55-seat coaches, 8hr rental each'},
+        {id: 14, time:'15:30', duration:15,  lanes:['party'],             event:'Bridal party arrives at KFV',                               location:'King Family Vineyards',            responsible:'Wedding Party',                        status:'tentative', notes:''},
+        {id: 15, time:'15:30', duration:30,  lanes:['party','vendors'],   event:'First Look photos (if applicable - decide!)',               location:'King Family Vineyards',            responsible:'The Smiths Photography',               status:'tentative', notes:''},
+        {id: 16, time:'15:45', duration:15,  lanes:['guests'],            event:'Guests begin arriving at KFV',                              location:'King Family Vineyards',            responsible:'Barbara Lundgren',                     status:'tentative', notes:''},
+        {id: 17, time:'15:50', duration:10,  lanes:['party'],             event:'Bridal party lineup',                                       location:'King Family Vineyards',            responsible:'Barbara Lundgren',                     status:'tentative', notes:''},
+        {id: 18, time:'16:00', duration:30,  lanes:['guests','party','vendors'], event:'CEREMONY BEGINS',                                    location:'King Family Vineyards',            responsible:'Officiant',                            status:'confirmed', notes:'4:00 PM sharp'},
+        {id: 19, time:'16:30', duration:5,   lanes:['guests','party','vendors'], event:'Ceremony ends',                                      location:'King Family Vineyards',            responsible:'',                                     status:'tentative', notes:''},
+        {id: 20, time:'16:30', duration:15,  lanes:['vendors'],           event:'Fireplace and fire pit started',                            location:'King Family Vineyards',            responsible:'KFV Staff',                            status:'tentative', notes:''},
+        {id: 21, time:'16:35', duration:55,  lanes:['guests','vendors'],  event:'Cocktail hour begins',                                      location:'King Family Vineyards',            responsible:'Harvest Moon Catering',                status:'tentative', notes:''},
+        {id: 22, time:'16:35', duration:55,  lanes:['vendors'],           event:'Passed appetizers served',                                  location:'King Family Vineyards',            responsible:'Harvest Moon Catering',                status:'tentative', notes:'Southwest Tuna Tartare Taco, Charred Tomato Bisque Shooter w/ Grilled Cheese, Braised Beef Short Rib. Full bar ($11/pp)'},
+        {id: 23, time:'16:35', duration:55,  lanes:['party','vendors'],   event:'Couple photos',                                             location:'King Family Vineyards',            responsible:'The Smiths Photography',               status:'tentative', notes:''},
+        {id: 24, time:'17:00', duration:30,  lanes:['party','vendors'],   event:'Family/bridal party group photos',                          location:'King Family Vineyards',            responsible:'The Smiths Photography',               status:'tentative', notes:''},
+        {id: 25, time:'17:30', duration:5,   lanes:['guests'],            event:'Guests seated, reception begins',                           location:'King Family Vineyards',            responsible:'Barbara Lundgren / DJ',                status:'tentative', notes:''},
+        {id: 26, time:'17:35', duration:5,   lanes:['party'],             event:'Grand entrance / Couple announced',                         location:'King Family Vineyards',            responsible:'Derek Tobler (DJ)',                     status:'tentative', notes:''},
+        {id: 27, time:'17:40', duration:10,  lanes:['party'],             event:'First dance',                                               location:'King Family Vineyards',            responsible:'Derek Tobler (DJ)',                     status:'tentative', notes:''},
+        {id: 28, time:'17:50', duration:25,  lanes:['party'],             event:'Welcome toast / speeches',                                  location:'King Family Vineyards',            responsible:'Best Man / Maid of Honor',             status:'tentative', notes:''},
+        {id: 29, time:'18:15', duration:15,  lanes:['vendors'],           event:'Autumn Burrata Salad + bread baskets served',               location:'King Family Vineyards',            responsible:'Harvest Moon Catering',                status:'tentative', notes:''},
+        {id: 30, time:'18:30', duration:45,  lanes:['vendors'],           event:'Family style dinner served',                                location:'King Family Vineyards',            responsible:'Harvest Moon Catering',                status:'tentative', notes:'Mains: Bistro Steak w/ Red Wine Demi & Citrus Grilled Salmon. Sides: Roasted Beets & Carrots w/ Walnut Pesto, Gruyère Potato Gratin. Veggie: Eggplant Involtini. 130 guests + 6 vendor meals'},
+        {id: 31, time:'19:15', duration:15,  lanes:['party'],             event:'Parent dances',                                             location:'King Family Vineyards',            responsible:'Derek Tobler (DJ)',                     status:'tentative', notes:''},
+        {id: 32, time:'19:30', duration:15,  lanes:['party','vendors'],   event:'Cake cutting',                                              location:'King Family Vineyards',            responsible:'Harvest Moon Catering',                status:'tentative', notes:''},
+        {id: 33, time:'19:45', duration:75,  lanes:['guests','party'],    event:'Open dancing begins',                                       location:'King Family Vineyards',            responsible:'Derek Tobler (DJ)',                     status:'tentative', notes:''},
+        {id: 34, time:'19:45', duration:75,  lanes:['guests','vendors'],  event:'Photo booth opens',                                         location:'King Family Vineyards',            responsible:'Photo Booth Charlottesville',           status:'tentative', notes:''},
+        {id: 35, time:'19:45', duration:75,  lanes:['guests','vendors'],  event:'S\'mores station opens (if decided)',                       location:'King Family Vineyards',            responsible:'Catering/TBD',                         status:'tentative', notes:''},
+        {id: 36, time:'21:00', duration:30,  lanes:['vendors'],           event:'Last call',                                                 location:'King Family Vineyards',            responsible:'Harvest Moon Catering',                status:'tentative', notes:''},
+        {id: 37, time:'21:30', duration:15,  lanes:['guests','party'],    event:'Bouquet toss (if applicable)',                              location:'King Family Vineyards',            responsible:'Derek Tobler (DJ)',                     status:'tentative', notes:''},
+        {id: 38, time:'21:45', duration:15,  lanes:['party'],             event:'Last dance',                                                location:'King Family Vineyards',            responsible:'Derek Tobler (DJ)',                     status:'tentative', notes:''},
+        {id: 39, time:'22:00', duration:30,  lanes:['guests','party','vendors'], event:'Reception ends / Sparkler send-off',                 location:'King Family Vineyards',            responsible:'All',                                  status:'tentative', notes:''},
+        {id: 40, time:'22:30', duration:30,  lanes:['party','vendors'],   event:'A&A Bus 1 (Sedan) departs with couple',                    location:'KFV → TBD',                        responsible:'A&A Limousine',                        status:'tentative', notes:'Sedan 2hr flat rate'},
+        {id: 41, time:'23:15', duration:30,  lanes:['guests','vendors'],  event:'A&A Bus 3 + Bus 4 (Coaches) return guests to hotels',      location:'KFV → Hotels',                     responsible:'A&A Limousine',                        status:'tentative', notes:'Both coaches drop at hotel blocks'}
+      ]
+    };
+
+    let state = loadState();
+    let currentTab = 'cash';
+    let editingCashId = null;
+    let editingTodoId = null;
+    let editingTimelineId = null;
+    let cashSearchFilter = '';
+    let todoMonthFilter = 'all';
+    let privacyMode = false;
+
+    // ============================================================================
+    // PRIVACY / ANONYMIZATION LAYER
+    // ============================================================================
+
+    const ANON_VENDOR_NAMES = [
+      'Vendor A','Vendor B','Vendor C','Vendor D','Vendor E','Vendor F',
+      'Vendor G','Vendor H','Vendor I','Vendor J','Vendor K','Vendor L',
+      'Vendor M','Vendor N','Vendor O','Vendor P','Vendor Q','Vendor R'
+    ];
+    const ANON_PEOPLE_NAMES = [
+      'Person A','Person B','Person C','Person D','Person E','Person F',
+      'Person G','Person H','Person I','Person J','Person K'
+    ];
+    const ANON_LOCATIONS = [
+      'Venue Alpha','Venue Beta','Location A','Location B','Location C',
+      'Hotel Nearby','Downtown Location','Private Residence'
+    ];
+
+    // Deterministic mapping so the same real name always maps to the same fake name
+    const _anonCache = {};
+    function anonName(real, pool) {
+      if (!real || !privacyMode) return real;
+      const key = real.trim().toLowerCase();
+      if (!_anonCache[key]) {
+        let hash = 0;
+        for (let i = 0; i < key.length; i++) hash = ((hash << 5) - hash) + key.charCodeAt(i);
+        _anonCache[key] = pool[Math.abs(hash) % pool.length];
+      }
+      return _anonCache[key];
+    }
+
+    function anonAmount(amt) {
+      if (!privacyMode) return amt;
+      // Round to nearest order of magnitude bucket so relative scale is visible but exact numbers are hidden
+      if (amt === 0) return 0;
+      const mag = Math.pow(10, Math.floor(Math.log10(Math.abs(amt))));
+      return Math.round(amt / mag) * mag;
+    }
+
+    function scrubText(text) {
+      if (!privacyMode || !text) return text;
+      let s = text;
+      // Scrub emails
+      s = s.replace(/[\w.-]+@[\w.-]+\.\w+/g, 'email@redacted.com');
+      // Scrub phone numbers (various formats)
+      s = s.replace(/\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/g, '(XXX) XXX-XXXX');
+      // Scrub dollar amounts in text like "$1,960.47"
+      s = s.replace(/\$[\d,]+(\.\d{2})?/g, '$X,XXX');
+      // Scrub card numbers like "ending in 1005"
+      s = s.replace(/ending in \d+/gi, 'ending in XXXX');
+      // Scrub Amex/card references
+      s = s.replace(/\*{3,}\d+/g, '***XXXX');
+      return s;
+    }
+
+    function anonCashDescription(item) {
+      if (!privacyMode) return item.description;
+      // Strip real names but keep the category type
+      return item.category + ' — ' + anonName(item.description, ANON_VENDOR_NAMES);
+    }
+
+    function anonTimelineEvent(ev) {
+      if (!privacyMode) return ev.event;
+      // Keep generic event names but scrub anything that looks like a proper noun
+      return ev.event;
+    }
+
+    function anonTimelineResponsible(ev) {
+      if (!privacyMode) return ev.responsible;
+      if (!ev.responsible) return '';
+      return anonName(ev.responsible, ANON_PEOPLE_NAMES);
+    }
+
+    function anonTimelineLocation(ev) {
+      if (!privacyMode) return ev.location;
+      if (!ev.location) return '';
+      return anonName(ev.location, ANON_LOCATIONS);
+    }
+
+    function anonTodoDescription(todo) {
+      if (!privacyMode) return todo.description;
+      return scrubText(todo.description);
+    }
+
+    function anonNotes(notes) {
+      if (!privacyMode || !notes) return notes;
+      return scrubText(notes);
+    }
+
+    function anonFormatCurrency(num) {
+      if (!privacyMode) return formatCurrency(num);
+      return '$X,XXX';
+    }
+
+    function togglePrivacy() {
+      privacyMode = !privacyMode;
+      const toggle = document.getElementById('privacyToggle');
+      const label = document.getElementById('privacyLabel');
+      document.body.classList.toggle('privacy-on', privacyMode);
+      toggle.classList.toggle('active', privacyMode);
+      label.textContent = privacyMode ? '🔒 Demo Mode ON' : '🔓 Demo Mode';
+
+      // Also anonymize the header
+      const h1 = document.querySelector('h1');
+      if (h1) h1.textContent = privacyMode ? 'Wedding Planner — Demo' : "Emily & Matt's Wedding Planner";
+
+      // Re-render current tab
+      if (currentTab === 'cash') renderCashManagement();
+      else if (currentTab === 'todos') renderTodos();
+      else if (currentTab === 'timeline') renderTimeline();
+    }
+
+    function getThisWeek() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dow = today.getDay(); // 0=Sun, 1=Mon...
+      const monday = new Date(today);
+      monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      return { start: monday, end: sunday, today };
+    }
+
+    function shortDate(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr + 'T00:00:00');
+      return d.toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
+    }
+
+    function cycleTodoStatus(id) {
+      const todo = state.todos.find(t => t.id === id);
+      if (!todo) return;
+      const cycle = ['pending', 'in-progress', 'done'];
+      const idx = cycle.indexOf(todo.status);
+      todo.status = cycle[(idx + 1) % cycle.length];
+      saveState();
+      renderTodos();
+    }
+
+    function loadState() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (!stored) return JSON.parse(JSON.stringify(DEFAULT_DATA));
+
+      const s = JSON.parse(stored);
+
+      // Migration: backfill startDate if missing
+      if (s.todos) {
+        s.todos.forEach(t => {
+          if (!t.startDate) {
+            const def = DEFAULT_DATA.todos.find(d => d.id === t.id);
+            t.startDate = def ? def.startDate : t.dueDate;
+          }
+        });
+      }
+
+      // Migration: backfill lanes + duration on timeline events from DEFAULT_DATA
+      if (s.timeline) {
+        s.timeline.forEach(ev => {
+          if (!ev.lanes || !ev.duration) {
+            const def = DEFAULT_DATA.timeline.find(d => d.id === ev.id);
+            if (def) {
+              if (!ev.lanes)    ev.lanes    = def.lanes;
+              if (!ev.duration) ev.duration = def.duration;
+            } else {
+              if (!ev.lanes)    ev.lanes    = ['vendors'];
+              if (!ev.duration) ev.duration = 30;
+            }
+          }
+        });
+      }
+
+      // Smart merge: add any DEFAULT_DATA items that don't exist in stored state yet
+      // This is how scheduled email sync injects new items without wiping user edits
+      const existingTodoIds = new Set((s.todos || []).map(t => t.id));
+      DEFAULT_DATA.todos.forEach(def => {
+        if (!existingTodoIds.has(def.id)) {
+          s.todos.push(JSON.parse(JSON.stringify(def)));
+        }
+      });
+
+      const existingCashIds = new Set((s.cash || []).map(c => c.id));
+      DEFAULT_DATA.cash.forEach(def => {
+        if (!existingCashIds.has(def.id)) {
+          s.cash.push(JSON.parse(JSON.stringify(def)));
+        }
+      });
+
+      return s;
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function formatCurrency(num) {
+      return '$' + num.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    function calculateDaysUntilWedding() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const wedding = new Date(WEDDING_DATE);
+      wedding.setHours(0, 0, 0, 0);
+      const diff = wedding - today;
+      return Math.ceil(diff / (1000 * 60 * 60 * 24));
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const date = new Date(dateStr + 'T00:00:00');
+      return date.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
+    }
+
+    function getMonthLabel(monthStr) {
+      if (!monthStr) return '';
+      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const [year, month] = monthStr.split('-');
+      return months[parseInt(month) - 1] + ' ' + year;
+    }
+
+    function timeToMinutes(timeStr) {
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      return hours * 60 + minutes;
+    }
+
+    function renderCashManagement() {
+      const out = state.cash.filter(item => item.type === 'out').reduce((sum, item) => sum + item.amount, 0);
+      const inbound = state.cash.filter(item => item.type === 'in').reduce((sum, item) => sum + item.amount, 0);
+      const net = inbound - out;
+
+      const filtered = state.cash.filter(item => {
+        if (!cashSearchFilter) return true;
+        const search = cashSearchFilter.toLowerCase();
+        return item.description.toLowerCase().includes(search) ||
+               item.category.toLowerCase().includes(search) ||
+               item.notes.toLowerCase().includes(search);
+      });
+
+      let html = `
+        <div class="summary-cards">
+          <div class="summary-card">
+            <h3>Total Budget</h3>
+            <div class="value">${anonFormatCurrency(out)}</div>
+          </div>
+          <div class="summary-card">
+            <h3>Total Contributions</h3>
+            <div class="value">${anonFormatCurrency(inbound)}</div>
+          </div>
+          <div class="summary-card">
+            <h3>Total Paid</h3>
+            <div class="value">${anonFormatCurrency(state.cash.filter(item => item.status === 'paid').reduce((sum, item) => sum + item.amount, 0))}</div>
+          </div>
+          <div class="summary-card">
+            <h3>Net Position</h3>
+            <div class="value" style="color: ${net >= 0 ? '#28a745' : '#dc3545'}">${anonFormatCurrency(net)}</div>
+          </div>
+        </div>
+
+        <div class="controls no-print">
+          <input type="text" id="cashSearch" placeholder="Search by description, category, or notes..." value="${cashSearchFilter}">
+          <button onclick="addNewCashItem()">+ Add Item</button>
+          <button class="secondary" onclick="exportCash()">Export JSON</button>
+          <button class="secondary" onclick="document.getElementById('importCashFile').click()">Import JSON</button>
+          <input type="file" id="importCashFile" style="display:none;" accept=".json" onchange="importCash()">
+        </div>
+
+        <h2 class="section-title">Cash Out (Payments)</h2>
+        <div class="items-grid">
+      `;
+
+      const outItems = filtered.filter(item => item.type === 'out');
+      if (outItems.length === 0) {
+        html += '<p style="color: #999; padding: 20px;">No items found.</p>';
+      } else {
+        outItems.forEach(item => {
+          html += renderCashItem(item);
+        });
+      }
+
+      html += `
+        </div>
+
+        <h2 class="section-title">Cash In (Contributions)</h2>
+        <div class="items-grid">
+      `;
+
+      const inItems = filtered.filter(item => item.type === 'in');
+      if (inItems.length === 0) {
+        html += '<p style="color: #999; padding: 20px;">No items found.</p>';
+      } else {
+        inItems.forEach(item => {
+          html += renderCashItem(item);
+        });
+      }
+
+      html += '</div>';
+
+      document.getElementById('content-area').innerHTML = html;
+
+      const searchInput = document.getElementById('cashSearch');
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          cashSearchFilter = e.target.value;
+          renderCashManagement();
+        });
+      }
+    }
+
+    function renderCashItem(item) {
+      if (editingCashId === item.id) {
+        return `
+          <div class="item-card">
+            <div class="item-header">
+              <div class="item-title">Editing...</div>
+            </div>
+            <div class="item-inputs">
+              <div class="form-group">
+                <label>Description</label>
+                <input type="text" id="edit-description" value="${item.description}">
+              </div>
+              <div class="form-group">
+                <label>Type</label>
+                <select id="edit-type">
+                  <option value="out" ${item.type === 'out' ? 'selected' : ''}>Out (Expense)</option>
+                  <option value="in" ${item.type === 'in' ? 'selected' : ''}>In (Contribution)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Category</label>
+                <input type="text" id="edit-category" value="${item.category}">
+              </div>
+              <div class="form-group">
+                <label>Amount</label>
+                <input type="number" id="edit-amount" value="${item.amount}" step="0.01">
+              </div>
+              <div class="form-group">
+                <label>Date</label>
+                <input type="date" id="edit-date" value="${item.date}">
+              </div>
+              <div class="form-group">
+                <label>Status</label>
+                <select id="edit-status">
+                  <option value="pending" ${item.status === 'pending' ? 'selected' : ''}>Pending</option>
+                  <option value="paid" ${item.status === 'paid' ? 'selected' : ''}>Paid</option>
+                  <option value="upcoming" ${item.status === 'upcoming' ? 'selected' : ''}>Upcoming</option>
+                </select>
+              </div>
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label>Notes</label>
+                <textarea id="edit-notes">${item.notes}</textarea>
+              </div>
+            </div>
+            <div class="item-actions">
+              <button class="btn-save" onclick="saveCashEdit(${item.id})">Save</button>
+              <button class="btn-delete" onclick="cancelCashEdit()">Cancel</button>
+            </div>
+          </div>
+        `;
+      }
+
+      const dispDesc = anonCashDescription(item);
+      const dispAmt  = anonFormatCurrency(item.amount);
+      const dispNotes = anonNotes(item.notes);
+
+      return `
+        <div class="item-card">
+          <div class="item-header">
+            <div class="item-title">${dispDesc}</div>
+            <div class="item-badges">
+              <span class="badge ${item.type === 'out' ? 'pending' : 'paid'}">${item.type === 'out' ? 'Expense' : 'Income'}</span>
+              <span class="badge ${item.status}">${item.status}</span>
+            </div>
+          </div>
+          <div class="item-details">
+            <div class="detail-field">
+              <div class="detail-label">Category</div>
+              <div class="detail-value">${item.category}</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-label">Amount</div>
+              <div class="detail-value amount">${dispAmt}</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-label">Date</div>
+              <div class="detail-value">${formatDate(item.date)}</div>
+            </div>
+          </div>
+          ${dispNotes ? `<div class="item-notes">${dispNotes}</div>` : ''}
+          <div class="item-actions no-print">
+            <button class="btn-save" onclick="editCashItem(${item.id})">Edit</button>
+            <button class="btn-delete" onclick="deleteCashItem(${item.id})">Delete</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderTodos() {
+      const pending = state.todos.filter(t => t.status === 'pending').length;
+      const inProg  = state.todos.filter(t => t.status === 'in-progress').length;
+      const done    = state.todos.filter(t => t.status === 'done').length;
+      const { start: weekStart, end: weekEnd, today } = getThisWeek();
+
+      const monthLabels = {
+        '2026-03':'March','2026-04':'April','2026-05':'May','2026-06':'June',
+        '2026-07':'July','2026-08':'August','2026-09':'September',
+        '2026-10':'October','2026-11':'November'
+      };
+
+      // ── THIS WEEK SECTION ──────────────────────────────────────────────────────
+      const weekFmt = weekStart.toLocaleDateString('en-US',{month:'short',day:'numeric'}) +
+                      ' – ' + weekEnd.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+
+      const overdue = state.todos.filter(t => {
+        if (t.status === 'done') return false;
+        return new Date(t.dueDate + 'T00:00:00') < today;
+      }).sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+      const thisWeek = state.todos.filter(t => {
+        if (t.status === 'done') return false;
+        const dd = new Date(t.dueDate + 'T00:00:00');
+        if (dd < today) return false;
+        const sd = t.startDate ? new Date(t.startDate + 'T00:00:00') : dd;
+        return sd <= weekEnd;
+      }).sort((a,b) => new Date(a.startDate||a.dueDate) - new Date(b.startDate||b.dueDate));
+
+      // ── FULL LIST SECTION ──────────────────────────────────────────────────────
+      let fullList = state.todos;
+      if (todoMonthFilter !== 'all') {
+        fullList = fullList.filter(t => t.month === todoMonthFilter);
+      }
+      fullList.sort((a,b) => new Date(a.startDate||a.dueDate) - new Date(b.startDate||b.dueDate));
+
+      // ── BUILD HTML ─────────────────────────────────────────────────────────────
+      let html = `
+        <div class="summary-cards">
+          <div class="summary-card"><h3>Pending</h3><div class="value">${pending}</div></div>
+          <div class="summary-card"><h3>In Progress</h3><div class="value">${inProg}</div></div>
+          <div class="summary-card"><h3>Done</h3><div class="value">${done}</div></div>
+          <div class="summary-card"><h3>Total</h3><div class="value">${state.todos.length}</div></div>
+        </div>
+
+        <div class="week-banner">📋 This Week &nbsp;·&nbsp; ${weekFmt}</div>
+        <div class="todo-table" style="margin-bottom:28px;">
+      `;
+
+      if (overdue.length > 0) {
+        html += `<div class="todo-section-header overdue-header">⚠ Overdue (${overdue.length})</div>`;
+        overdue.forEach(t => { html += renderTodoRow(t, today, weekEnd, 'overdue'); });
+      }
+      if (thisWeek.length > 0) {
+        html += `<div class="todo-section-header soon-header">▶ Start or Act This Week (${thisWeek.length})</div>`;
+        thisWeek.forEach(t => {
+          const cls = t.status === 'in-progress' ? 'in-progress-row' : 'starts-soon';
+          html += renderTodoRow(t, today, weekEnd, cls);
+        });
+      }
+      if (overdue.length === 0 && thisWeek.length === 0) {
+        html += `<div style="padding:20px;text-align:center;color:#999;font-size:13px;">🎉 Nothing urgent this week</div>`;
+      }
+      html += `</div>`;
+
+      // ── FULL LIST ──────────────────────────────────────────────────────────────
+      html += `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+          <div style="font-size:13px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.8px;">Full Task List</div>
+          <div class="filter-bar no-print" style="margin-bottom:0;">
+            <button class="filter-btn ${todoMonthFilter === 'all' ? 'active' : ''}" onclick="setTodoFilter('all')">All</button>
+            ${Object.entries(monthLabels).map(([m,label]) =>
+              `<button class="filter-btn ${todoMonthFilter === m ? 'active' : ''}" onclick="setTodoFilter('${m}')">${label}</button>`
+            ).join('')}
+          </div>
+          <button class="no-print" onclick="addNewTodo()" style="padding:6px 14px;background:#2D4A6B;color:white;border:none;border-radius:4px;cursor:pointer;font-size:13px;">+ Add Task</button>
+        </div>
+      `;
+
+      if (fullList.length === 0) {
+        html += '<p style="color:#999;padding:20px;">No tasks for this month.</p>';
+      } else if (todoMonthFilter === 'all') {
+        const byMonth = {};
+        fullList.forEach(t => {
+          if (!byMonth[t.month]) byMonth[t.month] = [];
+          byMonth[t.month].push(t);
+        });
+        Object.keys(byMonth).sort().forEach(m => {
+          html += `<div class="todo-table" style="margin-bottom:14px;">`;
+          html += `<div class="todo-section-header">${getMonthLabel(m)}</div>`;
+          byMonth[m].forEach(t => { html += renderTodoRow(t, today, weekEnd, ''); });
+          html += `</div>`;
+        });
+      } else {
+        html += `<div class="todo-table">`;
+        fullList.forEach(t => { html += renderTodoRow(t, today, weekEnd, ''); });
+        html += `</div>`;
+      }
+
+      document.getElementById('content-area').innerHTML = html;
+    }
+
+    function setTodoFilter(val) {
+      todoMonthFilter = val;
+      renderTodos();
+    }
+
+    function renderTodoRow(todo, today, weekEnd, forceCls) {
+      if (editingTodoId === todo.id) {
+        return `
+          <div class="todo-edit-row">
+            <div class="form-grid">
+              <div class="full-width">
+                <label>Description</label>
+                <textarea id="edit-todo-description">${todo.description}</textarea>
+              </div>
+              <div>
+                <label>Month</label>
+                <select id="edit-todo-month">
+                  <option value="2026-03" ${todo.month==='2026-03'?'selected':''}>March</option>
+                  <option value="2026-04" ${todo.month==='2026-04'?'selected':''}>April</option>
+                  <option value="2026-05" ${todo.month==='2026-05'?'selected':''}>May</option>
+                  <option value="2026-06" ${todo.month==='2026-06'?'selected':''}>June</option>
+                  <option value="2026-07" ${todo.month==='2026-07'?'selected':''}>July</option>
+                  <option value="2026-08" ${todo.month==='2026-08'?'selected':''}>August</option>
+                  <option value="2026-09" ${todo.month==='2026-09'?'selected':''}>September</option>
+                  <option value="2026-10" ${todo.month==='2026-10'?'selected':''}>October</option>
+                  <option value="2026-11" ${todo.month==='2026-11'?'selected':''}>November</option>
+                </select>
+              </div>
+              <div>
+                <label>Start Date</label>
+                <input type="date" id="edit-todo-start" value="${todo.startDate||''}">
+              </div>
+              <div>
+                <label>Due Date</label>
+                <input type="date" id="edit-todo-date" value="${todo.dueDate}">
+              </div>
+              <div>
+                <label>Status</label>
+                <select id="edit-todo-status">
+                  <option value="pending" ${todo.status==='pending'?'selected':''}>Pending</option>
+                  <option value="in-progress" ${todo.status==='in-progress'?'selected':''}>In Progress</option>
+                  <option value="done" ${todo.status==='done'?'selected':''}>Done</option>
+                </select>
+              </div>
+              <div>
+                <label>Priority</label>
+                <select id="edit-todo-priority">
+                  <option value="low" ${todo.priority==='low'?'selected':''}>Low</option>
+                  <option value="medium" ${todo.priority==='medium'?'selected':''}>Medium</option>
+                  <option value="high" ${todo.priority==='high'?'selected':''}>High</option>
+                </select>
+              </div>
+              <div class="full-width">
+                <label>Notes</label>
+                <textarea id="edit-todo-notes">${todo.notes}</textarea>
+              </div>
+            </div>
+            <div class="todo-edit-actions">
+              <button class="btn-save" onclick="saveTodoEdit(${todo.id})">Save</button>
+              <button class="btn-delete" onclick="cancelTodoEdit()">Cancel</button>
+            </div>
+          </div>
+        `;
+      }
+
+      // Build row class
+      const dd = new Date(todo.dueDate + 'T00:00:00');
+      const sd = todo.startDate ? new Date(todo.startDate + 'T00:00:00') : dd;
+      let rowCls = forceCls || '';
+      if (!rowCls) {
+        if (dd < today && todo.status !== 'done') rowCls = 'overdue';
+        else if (sd <= weekEnd && todo.status !== 'done') rowCls = 'starts-soon';
+        else if (todo.status === 'in-progress') rowCls = 'in-progress-row';
+      }
+      if (todo.status === 'done') rowCls = 'done-row';
+
+      // Due date label styling
+      const dueLabel = dd < today && todo.status !== 'done' ? 'overdue' :
+                       (dd <= weekEnd && todo.status !== 'done' ? 'due-soon' : '');
+
+      const startStr = todo.startDate ? `<div class="start-label">Start ${shortDate(todo.startDate)}</div>` : '';
+      const dueStr   = `<div class="due-label ${dueLabel}">Due ${shortDate(todo.dueDate)}</div>`;
+
+      const dispTodoDesc = anonTodoDescription(todo);
+
+      return `
+        <div class="todo-row ${rowCls}">
+          <div class="priority-dot ${todo.priority}"></div>
+          <div class="todo-desc">${dispTodoDesc}</div>
+          <div class="todo-dates no-print">${startStr}${dueStr}</div>
+          <button class="status-toggle ${todo.status} no-print" onclick="cycleTodoStatus(${todo.id})" title="Click to advance status">
+            ${todo.status === 'pending' ? 'Pending' : todo.status === 'in-progress' ? 'In Progress' : '✓ Done'}
+          </button>
+          <div class="todo-row-actions no-print">
+            <button onclick="editTodoItem(${todo.id})">Edit</button>
+            <button class="del-btn" onclick="deleteTodoItem(${todo.id})">×</button>
+          </div>
+        </div>
+      `;
+    }
+
+    // ── SWIMLANE CONSTANTS ────────────────────────────────────────────────────
+    const SL_START_MIN  = 8 * 60;      // 08:00
+    const SL_END_MIN    = 23 * 60 + 45; // 23:45
+    const SL_TOTAL_MIN  = SL_END_MIN - SL_START_MIN; // 945 min
+    const PX_PER_MIN    = 2;
+    const SL_HEIGHT     = SL_TOTAL_MIN * PX_PER_MIN;  // 1890px
+
+    function slTop(timeStr) {
+      return (timeToMinutes(timeStr) - SL_START_MIN) * PX_PER_MIN;
+    }
+
+    function assignSLCols(events) {
+      // Returns {id → {col, totalCols}}
+      const sorted = [...events].sort((a,b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+      const colEnds = []; // colEnds[c] = end minute of last event in column c
+      const result  = {};
+      sorted.forEach(e => {
+        const start = timeToMinutes(e.time);
+        const end   = start + (e.duration || 30);
+        let c = 0;
+        while (c < colEnds.length && colEnds[c] > start) c++;
+        colEnds[c] = end;
+        result[e.id] = { col: c, totalCols: 0 };
+      });
+      const numCols = colEnds.length || 1;
+      Object.values(result).forEach(v => v.totalCols = numCols);
+      return result;
+    }
+
+    function renderTimeline() {
+      const events = state.timeline;
+      const laneKeys = ['guests', 'party', 'vendors'];
+      const laneLabels = { guests:'👥 Guests', party:'💍 Wedding Party', vendors:'🎵 Vendors' };
+
+      // Per-lane column assignments
+      const colMaps = {};
+      laneKeys.forEach(lk => {
+        colMaps[lk] = assignSLCols(events.filter(e => (e.lanes||['vendors']).includes(lk)));
+      });
+
+      // Time axis markers (every 30 min)
+      let timeCells = '';
+      for (let m = 0; m <= SL_TOTAL_MIN; m += 30) {
+        const absMin = SL_START_MIN + m;
+        const h  = Math.floor(absMin / 60);
+        const mm = absMin % 60;
+        const label = (h > 12 ? h - 12 : h) + ':' + String(mm).padStart(2,'0') + (h < 12 ? 'a' : 'p');
+        const isHour = mm === 0;
+        timeCells += `<div class="sl-time-marker${isHour?' hour-mark':''}" style="top:${m*PX_PER_MIN}px">${label}</div>`;
+      }
+
+      // Grid lines (shared across lanes)
+      let gridLines = '';
+      for (let m = 0; m <= SL_TOTAL_MIN; m += 30) {
+        const isHour = (SL_START_MIN + m) % 60 === 0;
+        gridLines += `<div class="sl-grid-line${isHour?' hour-line':''}" style="top:${m*PX_PER_MIN}px"></div>`;
+      }
+
+      // Build event blocks per lane
+      function buildLane(lk) {
+        const laneEvents = events.filter(e => (e.lanes||['vendors']).includes(lk));
+        const cols = colMaps[lk];
+        return laneEvents.map(e => {
+          const cm    = cols[e.id] || { col:0, totalCols:1 };
+          const top   = slTop(e.time);
+          const h     = Math.max((e.duration||30) * PX_PER_MIN, 18);
+          const pct   = 100 / cm.totalCols;
+          const left  = cm.col * pct;
+          const isEd  = editingTimelineId === e.id;
+          const dispEvt  = anonTimelineEvent(e);
+          const dispResp = anonTimelineResponsible(e);
+          const dispLoc  = anonTimelineLocation(e);
+
+          return `
+            <div class="sl-event ${lk} ${e.status}${isEd?' editing':''}"
+                 style="top:${top}px;height:${h}px;left:calc(${left}% + 2px);width:calc(${pct}% - 4px);"
+                 onclick="editTimelineEvent(${e.id})"
+                 title="${dispEvt}&#10;${dispResp}&#10;${dispLoc}">
+              <div class="sl-event-time">${e.time}</div>
+              <div class="sl-event-title">${dispEvt}</div>
+              ${h > 38 && dispResp ? `<div class="sl-event-resp">${dispResp}</div>` : ''}
+            </div>`;
+        }).join('');
+      }
+
+      // Edit panel
+      let editPanel = '';
+      if (editingTimelineId) {
+        const ev = events.find(e => e.id === editingTimelineId);
+        if (ev) {
+          const ln = ev.lanes || ['vendors'];
+          const epEvt  = anonTimelineEvent(ev);
+          const epLoc  = anonTimelineLocation(ev);
+          const epResp = anonTimelineResponsible(ev);
+          const epNotes = anonNotes(ev.notes);
+          editPanel = `
+            <div class="tl-edit-panel no-print">
+              <h4>✏️ Editing: ${epEvt || 'New Event'}</h4>
+              <div class="tl-edit-grid">
+                <div><label>Time</label><input type="time" id="etl-time" value="${ev.time}"></div>
+                <div><label>Duration (min)</label><input type="number" id="etl-dur" value="${ev.duration||30}" min="5" step="5"></div>
+                <div><label>Status</label>
+                  <select id="etl-status">
+                    <option value="tentative" ${ev.status==='tentative'?'selected':''}>Tentative</option>
+                    <option value="confirmed" ${ev.status==='confirmed'?'selected':''}>Confirmed</option>
+                  </select>
+                </div>
+                <div><label>Swimlanes</label>
+                  <div class="lane-checks">
+                    <label class="lane-check-item guests"><input type="checkbox" id="etl-lg" ${ln.includes('guests')?'checked':''}>Guests</label>
+                    <label class="lane-check-item party"><input type="checkbox" id="etl-lp" ${ln.includes('party')?'checked':''}>Party</label>
+                    <label class="lane-check-item vendors"><input type="checkbox" id="etl-lv" ${ln.includes('vendors')?'checked':''}>Vendors</label>
+                  </div>
+                </div>
+                <div class="span4"><label>Event Description</label><input type="text" id="etl-event" value="${(privacyMode ? epEvt : ev.event).replace(/"/g,'&quot;')}"></div>
+                <div class="span2"><label>Location</label><input type="text" id="etl-loc" value="${(privacyMode ? epLoc : ev.location).replace(/"/g,'&quot;')}"></div>
+                <div class="span2"><label>Responsible Party</label><input type="text" id="etl-resp" value="${(privacyMode ? epResp : ev.responsible).replace(/"/g,'&quot;')}"></div>
+                <div class="span4"><label>Notes</label><textarea id="etl-notes">${privacyMode ? epNotes : ev.notes}</textarea></div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <button class="btn-save" onclick="saveTimelineEdit(${ev.id})">Save</button>
+                <button class="btn-delete" onclick="cancelTimelineEdit()">Cancel</button>
+                <button class="btn-delete" style="margin-left:auto;" onclick="deleteTimelineEvent(${ev.id})">Delete Event</button>
+              </div>
+            </div>`;
+        }
+      }
+
+      const html = `
+        <div class="controls no-print" style="margin-bottom:12px;">
+          <button onclick="window.print()">🖨 Print Timeline</button>
+          <button onclick="addNewTimelineEvent()">+ Add Event</button>
+          <span style="font-size:12px;color:#888;margin-left:8px;">Click any event block to edit · Dashed border = tentative</span>
+        </div>
+
+        ${editPanel}
+
+        <div class="swimlane-wrapper">
+          <div class="swimlane-header">
+            <div style="padding:10px 6px;font-size:10px;color:#bbb;text-align:right;letter-spacing:0.5px;">TIME</div>
+            ${laneKeys.map(lk => `<div class="lane-header-cell ${lk}">${laneLabels[lk]}</div>`).join('')}
+          </div>
+          <div class="swimlane-body" style="height:${SL_HEIGHT}px;">
+            <div class="sl-time-col" style="position:relative;height:${SL_HEIGHT}px;">${timeCells}</div>
+            ${laneKeys.map(lk => `
+              <div class="sl-lane-col" style="position:relative;height:${SL_HEIGHT}px;">
+                ${gridLines}
+                ${buildLane(lk)}
+              </div>`).join('')}
+          </div>
+        </div>`;
+
+      document.getElementById('content-area').innerHTML = html;
+    }
+
+    function addNewCashItem() {
+      const newItem = {
+        id: Date.now(),
+        description: '',
+        type: 'out',
+        category: '',
+        amount: 0,
+        date: new Date().toISOString().split('T')[0],
+        status: 'pending',
+        notes: ''
+      };
+      state.cash.push(newItem);
+      editingCashId = newItem.id;
+      saveState();
+      renderCashManagement();
+    }
+
+    function editCashItem(id) {
+      if (privacyMode) return; // Block editing in demo mode
+      editingCashId = id;
+      renderCashManagement();
+    }
+
+    function saveCashEdit(id) {
+      const item = state.cash.find(i => i.id === id);
+      if (item) {
+        item.description = document.getElementById('edit-description').value;
+        item.type = document.getElementById('edit-type').value;
+        item.category = document.getElementById('edit-category').value;
+        item.amount = parseFloat(document.getElementById('edit-amount').value) || 0;
+        item.date = document.getElementById('edit-date').value;
+        item.status = document.getElementById('edit-status').value;
+        item.notes = document.getElementById('edit-notes').value;
+      }
+      editingCashId = null;
+      saveState();
+      renderCashManagement();
+    }
+
+    function cancelCashEdit() {
+      editingCashId = null;
+      renderCashManagement();
+    }
+
+    function deleteCashItem(id) {
+      if (confirm('Delete this item?')) {
+        state.cash = state.cash.filter(i => i.id !== id);
+        saveState();
+        renderCashManagement();
+      }
+    }
+
+    function exportCash() {
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      const filename = `wedding-backup-${dateStr}.json`;
+      const dataStr = JSON.stringify(state, null, 2);
+      const blob = new Blob([dataStr], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importCash() {
+      const file = document.getElementById('importCashFile').files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (imported.cash && imported.todos && imported.timeline) {
+            state = imported;
+            saveState();
+            renderCashManagement();
+            alert('Data imported successfully!');
+          } else {
+            alert('Invalid file format.');
+          }
+        } catch (err) {
+          alert('Error reading file: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+      document.getElementById('importCashFile').value = '';
+    }
+
+    function addNewTodo() {
+      const today = new Date().toISOString().split('T')[0];
+      const newTodo = {
+        id: Date.now(),
+        description: '',
+        month: '2026-03',
+        startDate: today,
+        dueDate: today,
+        status: 'pending',
+        priority: 'medium',
+        notes: ''
+      };
+      state.todos.push(newTodo);
+      editingTodoId = newTodo.id;
+      saveState();
+      renderTodos();
+    }
+
+    function editTodoItem(id) {
+      if (privacyMode) return; // Block editing in demo mode
+      editingTodoId = id;
+      renderTodos();
+    }
+
+    function saveTodoEdit(id) {
+      const todo = state.todos.find(t => t.id === id);
+      if (todo) {
+        todo.description = document.getElementById('edit-todo-description').value;
+        todo.month = document.getElementById('edit-todo-month').value;
+        todo.startDate = document.getElementById('edit-todo-start').value;
+        todo.dueDate = document.getElementById('edit-todo-date').value;
+        todo.status = document.getElementById('edit-todo-status').value;
+        todo.priority = document.getElementById('edit-todo-priority').value;
+        todo.notes = document.getElementById('edit-todo-notes').value;
+      }
+      editingTodoId = null;
+      saveState();
+      renderTodos();
+    }
+
+    function cancelTodoEdit() {
+      editingTodoId = null;
+      renderTodos();
+    }
+
+    function deleteTodoItem(id) {
+      if (confirm('Delete this task?')) {
+        state.todos = state.todos.filter(t => t.id !== id);
+        saveState();
+        renderTodos();
+      }
+    }
+
+    function addNewTimelineEvent() {
+      const newEvent = {
+        id: Date.now(),
+        time: '12:00',
+        duration: 30,
+        lanes: ['vendors'],
+        event: '',
+        location: '',
+        responsible: '',
+        status: 'tentative',
+        notes: ''
+      };
+      state.timeline.push(newEvent);
+      editingTimelineId = newEvent.id;
+      saveState();
+      renderTimeline();
+    }
+
+    function editTimelineEvent(id) {
+      if (privacyMode) return; // Block editing in demo mode
+      editingTimelineId = (editingTimelineId === id) ? null : id;
+      renderTimeline();
+    }
+
+    function saveTimelineEdit(id) {
+      const ev = state.timeline.find(e => e.id === id);
+      if (ev) {
+        ev.time        = document.getElementById('etl-time').value;
+        ev.duration    = parseInt(document.getElementById('etl-dur').value) || 30;
+        ev.event       = document.getElementById('etl-event').value;
+        ev.location    = document.getElementById('etl-loc').value;
+        ev.responsible = document.getElementById('etl-resp').value;
+        ev.status      = document.getElementById('etl-status').value;
+        ev.notes       = document.getElementById('etl-notes').value;
+        const ln = [];
+        if (document.getElementById('etl-lg').checked) ln.push('guests');
+        if (document.getElementById('etl-lp').checked) ln.push('party');
+        if (document.getElementById('etl-lv').checked) ln.push('vendors');
+        ev.lanes = ln.length > 0 ? ln : ['vendors'];
+      }
+      editingTimelineId = null;
+      saveState();
+      renderTimeline();
+    }
+
+    function cancelTimelineEdit() {
+      editingTimelineId = null;
+      renderTimeline();
+    }
+
+    function deleteTimelineEvent(id) {
+      if (confirm('Delete this event?')) {
+        state.timeline = state.timeline.filter(e => e.id !== id);
+        editingTimelineId = null;
+        saveState();
+        renderTimeline();
+      }
+    }
+
+    function switchTab(tabName) {
+      currentTab = tabName;
+      editingCashId = null;
+      editingTodoId = null;
+      editingTimelineId = null;
+
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+      if (tabName === 'cash') {
+        renderCashManagement();
+      } else if (tabName === 'todos') {
+        renderTodos();
+      } else if (tabName === 'timeline') {
+        renderTimeline();
+      }
+    }
+
+    function init() {
+      const days = calculateDaysUntilWedding();
+      document.getElementById('countdown').textContent = `${days} days until your wedding!`;
+      if (LAST_SYNC) {
+        const syncEl = document.getElementById('sync-status');
+        if (syncEl) syncEl.textContent = `✓ Email sync: ${LAST_SYNC}`;
+      }
+
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          switchTab(e.target.dataset.tab);
+        });
+      });
+
+      renderCashManagement();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>
