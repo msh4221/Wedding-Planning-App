@@ -1,0 +1,5 @@
+.env
+email_agent/credentials.json
+email_agent/token.json
+__pycache__/
+*.pyc

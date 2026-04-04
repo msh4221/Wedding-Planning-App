@@ -926,9 +926,49 @@
         display: none;
       }
     }
+
+    /* Login overlay */
+    #login-overlay {
+      position: fixed; inset: 0;
+      background: linear-gradient(135deg, #EDE9DC 0%, #ffffff 100%);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999;
+    }
+    #login-box {
+      background: white; border-radius: 12px;
+      padding: 40px; width: 340px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+      text-align: center;
+    }
+    #login-box h2 { color: #2D4A6B; margin-bottom: 8px; font-weight: 300; font-size: 22px; }
+    #login-box p { color: #888; font-size: 13px; margin-bottom: 24px; }
+    #login-box input {
+      width: 100%; padding: 10px 14px; margin-bottom: 12px;
+      border: 1px solid #ddd; border-radius: 8px;
+      font-size: 14px; box-sizing: border-box;
+    }
+    #login-box button {
+      width: 100%; padding: 12px; background: #2D4A6B; color: white;
+      border: none; border-radius: 8px; font-size: 15px; cursor: pointer;
+    }
+    #login-box button:hover { background: #1C2B3A; }
+    #login-error { color: #c0392b; font-size: 13px; margin-top: 10px; min-height: 18px; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+  <div id="login-overlay" style="display:none;">
+    <div id="login-box">
+      <h2>Emily & Matt's Wedding Planner</h2>
+      <p>Sign in to continue</p>
+      <input type="email" id="login-email" placeholder="Email" autocomplete="email">
+      <input type="password" id="login-password" placeholder="Password" autocomplete="current-password"
+             onkeydown="if(event.key==='Enter')doLogin()">
+      <button onclick="doLogin()">Sign In</button>
+      <div id="login-error"></div>
+    </div>
+  </div>
+
   <header>
     <h1>Emily & Matt's Wedding Planner</h1>
     <div class="countdown" id="countdown">Loading...</div>
@@ -958,8 +998,11 @@
     // ============================================================================
 
     const WEDDING_DATE = new Date(2026, 10, 14);
-    const STORAGE_KEY = 'weddingPlanner_v2';
-    const LAST_SYNC = 'Apr 4, 2026'; // AUTO-UPDATED BY SCHEDULED TASK — DO NOT EDIT THIS LINE MANUALLY
+
+    // Supabase config — replace with your project values from supabase.com > Settings > API
+    const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const DEFAULT_DATA = {
       cash: [
@@ -1065,7 +1108,7 @@
       ]
     };
 
-    let state = loadState();
+    let state = { cash: [], todos: [], timeline: [] }; // populated async in init()
     let currentTab = 'cash';
     let editingCashId = null;
     let editingTodoId = null;
@@ -1213,11 +1256,21 @@
       renderTodos();
     }
 
-    function loadState() {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (!stored) return JSON.parse(JSON.stringify(DEFAULT_DATA));
+    async function loadState() {
+      const { data, error } = await sb
+        .from('wedding_data')
+        .select('data')
+        .eq('id', 'main')
+        .single();
 
-      const s = JSON.parse(stored);
+      if (error || !data) {
+        // First run — seed Supabase with DEFAULT_DATA
+        const seed = JSON.parse(JSON.stringify(DEFAULT_DATA));
+        await sb.from('wedding_data').insert({ id: 'main', data: seed });
+        return seed;
+      }
+
+      const s = data.data;
 
       // Migration: backfill startDate if missing
       if (s.todos) {
@@ -1229,7 +1282,7 @@
         });
       }
 
-      // Migration: backfill lanes + duration on timeline events from DEFAULT_DATA
+      // Migration: backfill lanes + duration on timeline events
       if (s.timeline) {
         s.timeline.forEach(ev => {
           if (!ev.lanes || !ev.duration) {
@@ -1245,27 +1298,53 @@
         });
       }
 
-      // Smart merge: add any DEFAULT_DATA items that don't exist in stored state yet
-      // This is how scheduled email sync injects new items without wiping user edits
+      // Smart merge: inject any new DEFAULT_DATA items (e.g. from email agent)
       const existingTodoIds = new Set((s.todos || []).map(t => t.id));
       DEFAULT_DATA.todos.forEach(def => {
-        if (!existingTodoIds.has(def.id)) {
-          s.todos.push(JSON.parse(JSON.stringify(def)));
-        }
+        if (!existingTodoIds.has(def.id)) s.todos.push(JSON.parse(JSON.stringify(def)));
       });
-
       const existingCashIds = new Set((s.cash || []).map(c => c.id));
       DEFAULT_DATA.cash.forEach(def => {
-        if (!existingCashIds.has(def.id)) {
-          s.cash.push(JSON.parse(JSON.stringify(def)));
-        }
+        if (!existingCashIds.has(def.id)) s.cash.push(JSON.parse(JSON.stringify(def)));
       });
 
       return s;
     }
 
     function saveState() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      // Update Supabase in the background — UI stays snappy
+      sb.from('wedding_data')
+        .upsert({ id: 'main', data: state, updated_at: new Date().toISOString() })
+        .then(({ error }) => { if (error) console.error('Supabase save error:', error); });
+    }
+
+    function setupRealtime() {
+      sb.channel('wedding_data_changes')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'wedding_data' }, (payload) => {
+          // Ignore updates triggered by this tab (saveState already updated local state)
+          const incoming = payload.new.data;
+          state = incoming;
+          if      (currentTab === 'cash')     renderCashManagement();
+          else if (currentTab === 'todos')    renderTodos();
+          else if (currentTab === 'timeline') renderTimeline();
+        })
+        .subscribe();
+    }
+
+    async function doLogin() {
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const errorEl = document.getElementById('login-error');
+      errorEl.textContent = '';
+
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) {
+        errorEl.textContent = error.message;
+        return;
+      }
+
+      document.getElementById('login-overlay').style.display = 'none';
+      await initApp();
     }
 
     function formatCurrency(num) {
@@ -2049,21 +2128,29 @@
       }
     }
 
-    function init() {
+    async function initApp() {
+      state = await loadState();
+      setupRealtime();
+
       const days = calculateDaysUntilWedding();
       document.getElementById('countdown').textContent = `${days} days until your wedding!`;
-      if (LAST_SYNC) {
-        const syncEl = document.getElementById('sync-status');
-        if (syncEl) syncEl.textContent = `✓ Email sync: ${LAST_SYNC}`;
-      }
+      const syncEl = document.getElementById('sync-status');
+      if (syncEl) syncEl.textContent = '✓ Live sync enabled';
 
       document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          switchTab(e.target.dataset.tab);
-        });
+        btn.addEventListener('click', (e) => { switchTab(e.target.dataset.tab); });
       });
 
       renderCashManagement();
+    }
+
+    async function init() {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        await initApp();
+      } else {
+        document.getElementById('login-overlay').style.display = 'flex';
+      }
     }
 
     if (document.readyState === 'loading') {
