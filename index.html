@@ -972,7 +972,13 @@
   <header>
     <h1>Emily & Matt's Wedding Planner</h1>
     <div class="countdown" id="countdown">Loading...</div>
-    <div id="sync-status" style="font-size:11px;opacity:0.7;margin-top:4px;font-style:normal;letter-spacing:0;"></div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:4px;">
+      <div id="sync-status" style="font-size:11px;opacity:0.7;font-style:normal;letter-spacing:0;"></div>
+      <button id="sync-btn" onclick="syncEmails()"
+        style="font-size:11px;padding:3px 10px;border-radius:12px;border:1px solid rgba(255,255,255,0.4);background:rgba(255,255,255,0.15);color:white;cursor:pointer;display:none;">
+        Sync Emails
+      </button>
+    </div>
   </header>
 
   <div class="nav-tabs">
@@ -1003,6 +1009,8 @@
     const SUPABASE_URL = 'https://yqnlbmoiqxmcoifqkuej.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_evKzphPYGqnI6k9DIlfpRw_nKS7D7wr';
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const LAST_SYNC = 'Apr 5, 2026'; // AUTO-UPDATED BY SCHEDULED TASK — DO NOT EDIT THIS LINE MANUALLY
 
     const DEFAULT_DATA = {
       cash: [
@@ -1061,7 +1069,9 @@
         {id: 29, description: 'Nov 13: Host rehearsal dinner at KFV Pavilion — run ceremony walkthrough with officiant + bridal party', month: '2026-11', startDate: '2026-11-13', dueDate: '2026-11-13', status: 'pending', priority: 'high', notes: ''},
         {id: 30, description: 'Nov 13: Welcome party at Three Notch\'d Brewery — greet guests, enjoy the night before the wedding', month: '2026-11', startDate: '2026-11-13', dueDate: '2026-11-13', status: 'pending', priority: 'high', notes: ''},
         {id: 31, description: 'Schedule Tom James final fitting with Katie Noriega — suit in production, custom Gitman lining approved 3/16. Coordinate fitting appointment for Sept/Oct, pay balance ~$1,960.47', month: '2026-09', startDate: '2026-08-01', dueDate: '2026-09-30', status: 'in-progress', priority: 'high', notes: 'Lining approved & signed 3/16/26. Katie: k.noriega@tomjames.com / 256.507.4793'},
-        {id: 32, description: 'Review and respond to Harvest Moon Catering updated proposal — Sammi sent revised Asinger-Horrigan proposal (PDF) reflecting post-tasting menu and rental selections; confirm accuracy or flag any discrepancies with Sammi', month: '2026-04', startDate: '2026-04-04', dueDate: '2026-04-14', status: 'pending', priority: 'high', notes: 'source: "Updated Proposal" from Sammi Jones (sammi@hmcatering.com), Mar 31, 2026'}
+        {id: 32, description: 'Review and respond to Harvest Moon Catering updated proposal — Sammi sent revised Asinger-Horrigan proposal (PDF) reflecting post-tasting menu and rental selections; confirm accuracy or flag any discrepancies with Sammi', month: '2026-04', startDate: '2026-04-04', dueDate: '2026-04-14', status: 'pending', priority: 'high', notes: 'source: "Updated Proposal" from Sammi Jones (sammi@hmcatering.com), Mar 31, 2026'},
+        {id: 33, description: 'Contact King Family Vineyards about hosting rehearsal luncheon on Nov 13 — reach out to KFV coordinator (Sammi Jones or venue contact) to inquire about space and catering options for ~30 people; casual sandwiches + drinks on property immediately following rehearsal walkthrough', month: '2026-05', startDate: '2026-04-15', dueDate: '2026-05-31', status: 'pending', priority: 'medium', notes: 'source: "Re: Wedding Review" - Emily Asinger / Barbara Lundgren, Apr 4, 2026'},
+        {id: 34, description: 'Review and complete Barb\'s draft planning documents — Barbara Lundgren sent checklist, itinerary, ceremony seating chart, floor plans, and sample photographer shot list; fill out and return to Barb ahead of August walkthrough', month: '2026-04', startDate: '2026-04-05', dueDate: '2026-04-30', status: 'pending', priority: 'medium', notes: 'source: "Re: Wedding Review" - Barbara Lundgren (barb@barbwiredllc.com), Mar 28, 2026'}
       ],
       timeline: [
         {id: 1,  time:'08:00', duration:15,  lanes:['vendors'],           event:'Hair & Makeup team (Rhett/Amby Services) arrives',          location:'Bird Cage Airbnb, Downtown Mall',  responsible:'Rhett/Amby Services',                  status:'tentative', notes:''},
@@ -1311,11 +1321,29 @@
       return s;
     }
 
+    function showSyncStatus(ok, message) {
+      const el = document.getElementById('sync-status');
+      if (!el) return;
+      if (ok) {
+        el.style.color = '';
+        el.style.opacity = '0.7';
+        el.textContent = message || '✓ Live sync active';
+      } else {
+        el.style.color = '#ff6b6b';
+        el.style.opacity = '1';
+        el.textContent = message || '⚠ Sync error — changes not saved';
+      }
+    }
+
     function saveState() {
-      // Update Supabase in the background — UI stays snappy
       sb.from('wedding_data')
         .upsert({ id: 'main', data: state, updated_at: new Date().toISOString() })
-        .then(({ error }) => { if (error) console.error('Supabase save error:', error); });
+        .then(({ error }) => {
+          if (error) {
+            console.error('Supabase save error:', error);
+            showSyncStatus(false);
+          }
+        });
     }
 
     function setupRealtime() {
@@ -2128,14 +2156,40 @@
       }
     }
 
+    async function syncEmails() {
+      const btn = document.getElementById('sync-btn');
+      btn.textContent = 'Syncing...';
+      btn.disabled = true;
+      try {
+        const { data, error } = await sb.functions.invoke('email-sync');
+        if (error) throw error;
+        state = await loadState();
+        if (currentTab === 'todos') renderTodos();
+        const n = data && data.added != null ? data.added : '?';
+        showSyncStatus(true, `✓ Synced — ${n} new item(s)`);
+      } catch (e) {
+        showSyncStatus(false, '⚠ Sync failed: ' + (e.message || e));
+      } finally {
+        btn.textContent = 'Sync Emails';
+        btn.disabled = false;
+      }
+    }
+
     async function initApp() {
-      state = await loadState();
+      showSyncStatus(true, 'Connecting...');
+      try {
+        state = await loadState();
+      } catch (e) {
+        showSyncStatus(false, '⚠ Could not load data — check Supabase setup');
+        console.error('loadState error:', e);
+        return;
+      }
       setupRealtime();
 
       const days = calculateDaysUntilWedding();
       document.getElementById('countdown').textContent = `${days} days until your wedding!`;
-      const syncEl = document.getElementById('sync-status');
-      if (syncEl) syncEl.textContent = '✓ Live sync enabled';
+      showSyncStatus(true, '✓ Live sync active');
+      document.getElementById('sync-btn').style.display = '';
 
       document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', (e) => { switchTab(e.target.dataset.tab); });
